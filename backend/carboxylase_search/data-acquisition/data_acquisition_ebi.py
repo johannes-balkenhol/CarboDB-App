@@ -15,7 +15,7 @@ number_of_last_page = 25046
 
 def get_ids_with_predicted_CDS(link_to_ressource):
      ids_with_prediceted_CDs = []
-     for num in range(60, 71):
+     for num in range(1, 2):
          try:
              r = fetch_page_of_db(link_to_ressource, num)
              if r is None or r.status_code != 200:
@@ -51,7 +51,7 @@ def test_if_entry_has_predicted_CDS(r_json, ids_with_prediceted_CDs):
                ids_with_prediceted_CDs.append(entry['id']) 
                #print(f"Entry ID {entry['id']} has 'Predicted CDS' with value > 0: {item['value']}")
                
-def save_ids_to_file(ids, filename="ids_with_predicted_CDS.txt"):
+def save_ids_to_file(ids, filename="out/ids_with_predicted_CDS.txt"):
     try:
         with open(filename, "w") as file:
             for id in ids:
@@ -67,7 +67,7 @@ def save_ids_to_file(ids, filename="ids_with_predicted_CDS.txt"):
 
 #Use collected entry Ids to collect the file Ids with the CDS data
     
-def collect_data_for_given_ids(link_to_ressource, filename="ids_with_predicted_CDS_test.txt"):
+def collect_data_for_given_ids(link_to_ressource, filename="out/ids_with_predicted_CDS.txt"):
     ids = read_ids_from_txt(filename)
     id_list = []
     for id in ids: 
@@ -110,5 +110,5 @@ def get_download_file_ids(r_json, id_list):
     
 
 ids = collect_data_for_given_ids(link_to_ressource_basic)
-save_ids_to_file(ids, "file_ids_for_download.txt")
+save_ids_to_file(ids, "out/file_ids_for_download.txt")
 
