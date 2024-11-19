@@ -1,9 +1,9 @@
 <script setup>
-import TheWelcome from '../components/TheWelcome.vue'
+import FileUpload from '../components/FileUpload.vue'
 </script>
 
 <template>
   <main>
-    <TheWelcome />
+    <FileUpload />
   </main>
 </template>
