@@ -1,28 +1,37 @@
 <template>
-  <div class="upload-error-wrapper">
-    <div class="upload-wrapper"
-         @drop.prevent="handleDrop"
-         @dragenter.prevent
-         @dragleave.prevent
-         @dragover.prevent
-    >
-      <font-awesome-icon :icon="faFileCsv()" class="icon upload-icon"></font-awesome-icon>
-      <span class="upload-text">Drop file</span>
-      <span class="upload-text">or</span>
-      <button class="button-action" @click="openFile">Upload File</button>
-      <input @input="handleInput" id="importFile" type="file" style="display: none" />
+  <template v-if="!this.isValid">
+    <div class="upload-error-wrapper">
+      <div class="upload-wrapper"
+           @drop.prevent="handleDrop"
+           @dragenter.prevent
+           @dragleave.prevent
+           @dragover.prevent
+      >
+        <font-awesome-icon :icon="faFileCsv()" class="icon upload-icon"></font-awesome-icon>
+        <span class="upload-text">Drop file</span>
+        <span class="upload-text">or</span>
+        <button class="button-action" @click="openFile">Upload File</button>
+        <input @input="handleInput" id="importFile" type="file" style="display: none" />
+      </div>
+      <div :class="{ 'visible': this.errors.length > 0 }" class="error-wrapper">
+        <ul>
+          <li v-for="(error, index) in errors" :key="index">{{ error }}</li>
+        </ul>
+      </div>
     </div>
-    <div :class="{ 'visible': this.errors.length > 0 }" class="error-wrapper">
-      <ul>
-        <li v-for="(error, index) in errors" :key="index">{{ error }}</li>
-      </ul>
+  </template>
+  <template v-else>
+    <div>
+      <h2>Your input was valid, please press the button to start hmmer search</h2>
+      <button class="button-action-big">Start Search</button>
     </div>
-  </div>
+  </template>
 </template>
 
 <script>
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faFile } from '@fortawesome/free-solid-svg-icons';
+import { useValidationStore } from "@/stores/validation.js";
 
 export default {
   name: "FileUpload",
@@ -32,6 +41,7 @@ export default {
       loadedFasta: {},
       linesOfCSV: [],
       errors: [],
+      isValid: false,
     }
   },
   methods: {
@@ -79,12 +89,24 @@ export default {
         }
       }
     },
+    async validateInput() {
+      const validationStore = useValidationStore();
+      try {
+        await validationStore.validateFastaInput();
+
+        this.isValid = validationStore.isValid;
+        this.errors = validationStore.errors;
+      } catch (error) {
+        console.error("An error occurred during validation:", error);
+      }
+    },
     /**
      * Imports the FASTA file.
      * Error handling with the errors array.
      * @param {Blob} file
      */
     async importFasta(file) {
+      await this.validateInput();
       this.errors = [];
       /** Use FileReader to read the file */
       const reader = new FileReader();

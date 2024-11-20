@@ -10,25 +10,35 @@
   --color-black: #12130F;
   --color-black-transparent: #12130F60;
 
-  --color-green: #5B9279;
+  --color-green: #629677;
+  --color-green-transparent: #62967780;
   --color-light-green: #8FCB9B;
   --color-light-green-transparent: #8FCB9B80;
 
+
+  --color-dark-blue: #0A2239;
   --color-blue: #505168;
+  --color-blue-2: #95AFC6;
+  --color-blue-2-transparent: #95AFC680;
   --color-light-blue: #B9BACA;
   --color-brown: #594236;
 
+  --color-midnight-green: #26777D;
+  --color-magenta: #7C606B;
+
+  --color-rose: #C2847A;
   --color-red: #e63022;
 }
 
 /* semantic color variables for this project */
 :root {
   --color-background: var(--color-light-grey);
-  --color-header: var(--color-green);
+  --color-header-spacer: var(--color-blue);
+  --color-header: var(--color-blue-2);
 
   --color-text: var(--color-black);
-  --color-button: var(--color-light-green);
-  --color-button-hover: var(--color-light-green-transparent);
+  --color-button: var(--color-green);
+  --color-button-hover: var(--color-green-transparent);
   --color-button-navigation: var(--color-black);
   --color-button-navigation-hover: var(--color-black-transparent);
 
