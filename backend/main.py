@@ -5,7 +5,7 @@ CORS is enabled for all origins to allow cross-origin requests.
 
 """
 
-from flask import Flask
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -25,6 +25,17 @@ def create_app():
 @app.route("/")
 def hello_world():
     return "<p>Hello, World!</p>"
+
+
+@app.route("/validate-fasta", methods=['POST'])
+def validate_fasta():
+    is_valid = True
+    return jsonify(is_valid)
+
+
+@app.route("/hmmer-search", methods=['POST'])
+def hmmer_search():
+    return jsonify(hmmer_search())
 
 
 if __name__ == '__main__':
