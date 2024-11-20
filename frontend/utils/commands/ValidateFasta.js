@@ -1,4 +1,4 @@
-import Client from "../client.js";
+import Client from "../Client.js";
 
 const ENDPOINT = "/validate-fasta";
 
