@@ -8,7 +8,7 @@ CORS is enabled for all origins to allow cross-origin requests.
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import os
-from backend.carboxylase_search.hmmer.hmmer import runHmmer
+from backend.carboxylase_search.hmmer.hmmer import run_hmmer_workflow_for_all_profiles
 
 app = Flask(__name__)
 
@@ -39,9 +39,10 @@ def validate_fasta():
 
 @app.route("/hmmer-search", methods=['POST'])
 def hmmer_search():
-    hmm_file_location = os.path.join(BASE_DIR, "resources/carboxylases/hmmers/PF00101.hmm")
+    hmm_file_location = os.path.join(BASE_DIR, "resources/carboxylases/hmmers")
     seq_file_location = os.path.join(BASE_DIR, "backend/carboxylase_search/data-acquisition/out/ERZ477576_FASTA_predicted_cds.faa.gz")
-    runHmmer(hmm_file_location, seq_file_location)
+    save_file_location = os.path.join(BASE_DIR, "backend/carboxylase_search/data-acquisition/out")
+    run_hmmer_workflow_for_all_profiles(hmm_file_location, seq_file_location, save_file_location)
     return jsonify(True)
 
 
