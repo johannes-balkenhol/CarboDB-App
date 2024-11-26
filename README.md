@@ -9,4 +9,13 @@
 - Use ``git clone`` to fetch the repo.
 - Install dependencies
 
+### Install requirements
+#### Backend
+- in terminal from project root ``cd backend``
+- ``conda install --file requirements.txt``
+- new requirements can be added by ``conda list -e > requirements.txt``
+#### Frontend
+- in terminal from project root ``cd frontend``
+- [See frontend README.md](frontend/README.md)
+
 ### General project structure
