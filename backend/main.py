@@ -42,8 +42,8 @@ def validate_fasta():
 def hmmer_search():
     hmm_file_location = os.path.join(BASE_DIR, "resources/carboxylases/hmmers2")
     repository = HmmProfileRepository(hmm_file_location)
-    seq_file_location = os.path.join(BASE_DIR, "backend/carboxylase_search/data-acquisition/out/ERZ477576_FASTA_predicted_cds.faa.gz")
-    save_file_location = os.path.join(BASE_DIR, "backend/carboxylase_search/data-acquisition/out")
+    seq_file_location = os.path.join(BASE_DIR, "backend/carboxylase_search/data_acquisition/out/ERZ477576_FASTA_predicted_cds.faa.gz")
+    save_file_location = os.path.join(BASE_DIR, "backend/carboxylase_search/data_acquisition/out")
     run_hmmer_workflow_for_all_profiles(repository, seq_file_location, save_file_location)
     return jsonify(True)
 
