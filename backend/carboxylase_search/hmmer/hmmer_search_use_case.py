@@ -6,45 +6,30 @@ Created on Wed Oct 23 10:51:03 2024
 @author: eva
 """
 
-import pyhmmer
 from dna_features_viewer import GraphicFeature, GraphicRecord
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
-import os
+from backend.carboxylase_search.hmmer.hmmer_search_utils import run_hmmer_search, read_hmm_profile
 
 
 #Example data used link: https://www.ebi.ac.uk/metagenomics/api/v1/analyses/MGYA00383254/file/ERZ477576_FASTA_predicted_cds.faa.gz
 
 def run_hmmer_workflow(hmm_file_location, seq_file_location, save_file_location):
-    sequences, hits = run_hmmer_search(hmm_file_location, seq_file_location)
+    hmm_profile = read_hmm_profile(hmm_file_location)
+    sequences, hits = run_hmmer_search(hmm_profile, seq_file_location)
     basic_output_hmmer_results(hits)
     plot_hmmer_results(hits, sequences, save_file_location)
 
-
-def run_hmmer_workflow_for_all_profiles(hmm_file_directory, seq_file_location, save_file_location):
-    hmm_files = [os.path.join(hmm_file_directory, f) for f in os.listdir(hmm_file_directory) if f.endswith('.hmm')]
+def run_hmmer_workflow_for_all_profiles(repository, seq_file_location, save_file_location):
+    hmm_profiles = repository.get_all_profiles();
     best_hits = []
-    for file in hmm_files:
-        sequences, hits = run_hmmer_search(file, seq_file_location)
+    for profile in hmm_profiles:
+        sequences, hits = run_hmmer_search(profile.content, seq_file_location)
         if hits:
             best_hit = min(hits, key=lambda hit: hit.evalue)
             best_hits.append(best_hit)
-            #basic_output_hmmer_results(best_hits)
 
     plot_hmmer_results(best_hits, sequences, save_file_location)
-
-def run_hmmer_search(hmm_file_location, seq_file_location):
-    with pyhmmer.plan7.HMMFile(hmm_file_location) as hmm_file:
-        hmm = hmm_file.read()
-
-    # Step 2: Perform HMMER search with carboxylase HMM
-
-    with pyhmmer.easel.SequenceFile(seq_file_location, digital=True) as seq_file:
-        sequences = seq_file.read_block()
-
-    pipeline = pyhmmer.plan7.Pipeline(hmm.alphabet)
-    hits = pipeline.search_hmm(hmm, sequences)
-    return sequences, hits
 
 def basic_output_hmmer_results(hits):
     # Show alignment on a basic level in the command line
