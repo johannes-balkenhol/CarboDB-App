@@ -13,9 +13,14 @@
 #### Backend
 - in terminal from project root ``cd backend``
 - ``conda install --file requirements.txt``
+- currently used conda channels: ``defaults, conda-forge, bioconda, anaconda``
 - new requirements can be added by ``conda list -e > requirements.txt``
 #### Frontend
 - in terminal from project root ``cd frontend``
 - [See frontend README.md](frontend/README.md)
 
 ### General project structure
+
+### Tests
+Tests are implemented using ``pytest``. This command can be run to start the test suit.\
+To get a more detailed output use ``pytest -v``.
