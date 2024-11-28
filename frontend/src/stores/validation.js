@@ -6,9 +6,9 @@ export const useValidationStore = defineStore('validation', () => {
     let isValid = ref(false);
     let errors = ref([]);
 
-    async function validateFastaInput() {
+    async function validateFastaInput(file) {
         try{
-            let response = await validateFasta();
+            let response = await validateFasta(file);
             isValid.value = response.data;
         } catch (error) {
             errors.value.push("Unknown error");

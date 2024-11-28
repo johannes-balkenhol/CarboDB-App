@@ -1,5 +1,5 @@
 <template>
-  <template v-if="!this.isValid">
+  <template v-if="!(this.isValid == true)">
     <div class="upload-error-wrapper">
       <div class="upload-wrapper"
            @drop.prevent="handleDrop"
@@ -65,7 +65,7 @@ export default {
     /**
      * Handles the upload in the hidden input element.
      * @param {Event} event The InputEvent containing the file.
-     * @return {Promise<void>} Promise that resolves when the CSV is successfully imported.
+     * @return {Promise<void>} Promise that resolves when the FASTA is successfully imported.
      */
     handleInput: async function(event) {
       const input = document.getElementById("importFile");
@@ -79,7 +79,7 @@ export default {
     /**
      * Handles the drop in the dropzone.
      * @param {DragEvent} event The DropEvent containing the file.
-     * @return {Promise<void>} Promise that resolves when the CSV is successfully imported.
+     * @return {Promise<void>} Promise that resolves when the FASTA is successfully imported.
      */
     handleDrop: async function(event) {
       const dropZone = document.getElementsByName("drop-zone")[0];
@@ -90,10 +90,15 @@ export default {
         }
       }
     },
-    async validateInput() {
+    /**
+     * Validates the FASTA file.
+     * @param {Blob} file
+     * @return {Promise<void>} Promise that resolves when the FASTA is successfully validated
+     */
+    async validateInput(file) {
       const validationStore = useValidationStore();
       try {
-        await validationStore.validateFastaInput();
+        await validationStore.validateFastaInput(file);
 
         this.isValid = validationStore.isValid;
         this.errors = validationStore.errors;
@@ -117,23 +122,30 @@ export default {
      * @param {Blob} file
      */
     async importFasta(file) {
-      await this.validateInput();
+      await this.validateInput(file);
       this.errors = [];
-      /** Use FileReader to read the file */
-      const reader = new FileReader();
 
-      reader.onload = (event) => {
-        this.loadedFasta = (event.target.result || "{}");
-        if(this.loadedFasta) {
-          reader.readAsText(file);
-        } else {
-          this.errors.push('There was an error while reading the data.')
-        }
+      if(this.isValid == true){
+        /** Use FileReader to read the file */
+        const reader = new FileReader();
 
-      };
-      reader.onerror = () => {
-        console.error("Error reading file: " + file.name);
-      };
+        reader.onload = (event) => {
+          this.loadedFasta = (event.target.result || "{}");
+          if(this.loadedFasta) {
+            reader.readAsText(file);
+          } else {
+            errors.push('There was an error while reading the data.')
+          }
+
+        };
+        reader.onerror = () => {
+          console.error("Error reading file: " + file.name);
+        };
+      }
+      else {
+        this.errors.push(this.isValid);
+      }
+
     },
   },
   components: { FontAwesomeIcon }

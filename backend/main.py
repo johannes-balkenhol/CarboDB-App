@@ -4,11 +4,13 @@ This module sets up a Flask application to handle various web requests, includin
 CORS is enabled for all origins to allow cross-origin requests.
 
 """
+import tempfile
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import os
 from backend.carboxylase_search.hmmer.hmmer_search_use_case import run_hmmer_workflow_for_all_profiles
+from backend.carboxylase_search.validate_user_input.fasta_validator import is_valid_fasta
 from backend.repository.HmmProfileRepository import HmmProfileRepository
 
 app = Flask(__name__)
@@ -34,7 +36,11 @@ def hello_world():
 
 @app.route("/validate-fasta", methods=['POST'])
 def validate_fasta():
-    is_valid = True
+    file = request.files['file']
+
+    with tempfile.NamedTemporaryFile(delete=True) as temp_file:
+        file.save(temp_file.name)
+        is_valid = is_valid_fasta(temp_file.name)
     return jsonify(is_valid)
 
 
