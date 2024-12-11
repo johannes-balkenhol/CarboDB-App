@@ -1,31 +1,28 @@
 <template>
-  <template v-if="!(this.isValid == true)">
-    <div class="upload-error-wrapper">
-      <div class="upload-wrapper"
-           @drop.prevent="handleDrop"
-           @dragenter.prevent
-           @dragleave.prevent
-           @dragover.prevent
-      >
-        <font-awesome-icon :icon="faFileCsv()" class="icon upload-icon"></font-awesome-icon>
-        <span class="upload-text">Drop file</span>
-        <span class="upload-text">or</span>
-        <button class="button-action" @click="openFile">Upload File</button>
-        <input @input="handleInput" id="importFile" type="file" style="display: none" />
-      </div>
-      <div :class="{ 'visible': this.errors.length > 0 }" class="error-wrapper">
-        <ul>
-          <li v-for="(error, index) in errors" :key="index">{{ error }}</li>
-        </ul>
-      </div>
+  <div class="upload-error-wrapper">
+    <textarea></textarea>
+    <div class="upload-wrapper"
+         @drop.prevent="handleDrop"
+         @dragenter.prevent
+         @dragleave.prevent
+         @dragover.prevent
+    >
+    <template v-if="!(this.isValid == true)">
+      <span class="upload-text">Drop file or</span>
+      <button class="button-action" @click="openFile">Browse</button>
+    </template>
+    <template v-else>
+      <font-awesome-icon font-awesome-icon :icon="faFileCsv()" class="icon upload-icon"></font-awesome-icon>
+      <span>{{ this.loadedFasta }}</span>
+    </template>
+    <input @input="handleInput" id="importFile" type="file" style="display: none" />
     </div>
-  </template>
-  <template v-else>
-    <div>
-      <h2>Your input was valid, please press the button to start hmmer search</h2>
-      <button class="button-action-big" @click="runHmmerSearch">Start Search</button>
+    <div :class="{ 'visible': this.errors.length > 0 }" class="error-wrapper">
+      <ul>
+        <li v-for="(error, index) in errors" :key="index">{{ error }}</li>
+      </ul>
     </div>
-  </template>
+  </div>
 </template>
 
 <script>
@@ -157,8 +154,8 @@ export default {
 
 .upload-wrapper {
   background-color: var(--color-white);
-  width: 25vw;
-  height: 30vh;
+  width: 400px;
+  height: 100px;
   border: 1px dashed var(--color-border);
   display: flex;
   flex-direction: column;
@@ -174,4 +171,9 @@ export default {
   margin-bottom: 3px;
 }
 
+textarea {
+  height: 200px;
+  width: 400px;
+  resize: none;
+}
 </style>

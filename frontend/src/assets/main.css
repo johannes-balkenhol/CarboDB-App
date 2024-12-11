@@ -12,15 +12,11 @@
 /*Headings*/
 
 .h1 {
-  padding: 4vh 0 4vh 8vh;
+  margin: 10px 0 10px 30px;
 }
 
 .h2 {
-  margin: 0 0 2vh 0;
-}
-
-.h3 {
-  margin: 0 0 1vh 1vh;
+  margin: 0 0 5px 0;
 }
 
 a {
@@ -107,12 +103,6 @@ input, textarea, select {
   width: 300px;
 }
 
-.upload-error-wrapper {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
 
 .error-wrapper {
   margin-left: 10px;
@@ -153,18 +143,11 @@ input, textarea, select {
 
 .button-action {
   background: var(--color-button);
-  padding: 1vh 2vh 1vh 2vh;
+  padding: 8px 16px; 
   border: none;
   border-radius: 30px;
   margin-top: 5px;
   margin-left: 5px;
-}
-
-.button-action-list {
-  background: var(--color-button);
-  padding: 1vh 2vh 1vh 2vh;
-  border: none;
-  border-radius: 30px;
 }
 
 .button-action:hover {
@@ -173,10 +156,11 @@ input, textarea, select {
 
 .button-action-big {
   background: var(--color-button);
-  padding: 2vh 3vh 2vh 3vh;
+  padding: 12px 24px; 
   border: none;
   border-radius: 30px;
-  margin: 5px 20px 0 0;
+  margin-top: 5px;
+  margin-left: 5px;
 }
 
 .button-action-big:hover {
@@ -195,31 +179,10 @@ input, textarea, select {
   background: var(--color-light-grey);
 }
 
-
-/*Navigation buttons in the page header*/
-
-.button-navigation {
-  color: var(--color-button-navigation);
-  height: 6vh;
-  width: 6vh;
-}
-
-.button-navigation:hover {
-  color: var(--color-button-navigation-hover);
-}
-
-.button-navigation:active {
-  color: var(--color-blue);
-}
-
-.button-navigation:not(:active) {
-  transition: color 200ms ease; /* Transition for color fade out after click */
-}
-
 /*Styling for icons from FontAwesome*/
 
 .icon {
-  font-size: 4vh;
+  font-size: 30px;
 }
 
 /* Styling for the global feedbackMessage */
