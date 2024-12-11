@@ -1,8 +1,12 @@
 @import './base.css';
 
 #app {
-  width: 100%;
+  width: 80vw;
   font-weight: normal;
+  text-align: left;
+  margin: 0 auto;
+  margin-top: 10px;
+  background-color: var(--color-background);
 }
 
 /*Headings*/

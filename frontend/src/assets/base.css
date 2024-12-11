@@ -17,6 +17,7 @@
 
 
   --color-dark-blue: #0A2239;
+  --color-dark-blue-transparent: #0A223970;
   --color-blue: #505168;
   --color-blue-2: #95AFC6;
   --color-blue-2-transparent: #95AFC680;
@@ -32,9 +33,10 @@
 
 /* semantic color variables for this project */
 :root {
+  --color-body: var(--color-dark-blue-transparent);
   --color-background: var(--color-light-grey);
-  --color-header-spacer: var(--color-blue);
-  --color-header: var(--color-blue-2);
+  --color-navigation: var(--color-dark-blue);
+  --color-navigation-hover: var(--color-blue);
 
   --color-text: var(--color-black);
   --color-button: var(--color-green);
@@ -60,7 +62,7 @@
 body {
   min-height: 100vh;
   color: var(--color-text);
-  background: var(--color-background);
+  background: var(--color-body);
   transition:
     color 0.5s,
     background-color 0.5s;

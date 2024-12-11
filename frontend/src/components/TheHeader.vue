@@ -5,22 +5,16 @@ export default {
 </script>
 
 <template>
-  <div class="header-spacer"></div>
   <div class="header">
     <slot></slot>
   </div>
 </template>
 
 <style scoped>
-.header-spacer {
-  background: var(--color-header-spacer);
-  min-height: 3vh;
-}
-
 .header {
-  background: var(--color-header);
-  min-height: 10vh;
+  height: 100px;
   display: flex;
   align-items: center;
+  margin-top: 10px;
 }
 </style>
