@@ -10,6 +10,8 @@ from dna_features_viewer import GraphicFeature, GraphicRecord
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from backend.carboxylase_search.hmmer.hmmer_search_utils import run_hmmer_search, read_hmm_profile
+from backend.carboxylase_search.hmmer.plot_test import test_plot
+from backend.domain.HmmerSearchResult import HmmerSearchResult
 
 
 #Example data used link: https://www.ebi.ac.uk/metagenomics/api/v1/analyses/MGYA00383254/file/ERZ477576_FASTA_predicted_cds.faa.gz
