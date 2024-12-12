@@ -29,7 +29,6 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faFile } from '@fortawesome/free-solid-svg-icons';
 import { useValidationStore } from "@/stores/validation.js";
-import { useHmmerStore } from "@/stores/hmmer.js";
 
 export default {
   name: "FileUpload",
@@ -99,16 +98,6 @@ export default {
 
         this.isValid = validationStore.isValid;
         this.errors = validationStore.errors;
-      } catch (error) {
-        console.error("An error occurred during validation:", error);
-      }
-    },
-    async runHmmerSearch() {
-      const hmmerStore = useHmmerStore()
-      try {
-        await hmmerStore.runHmmerSearch();
-
-        this.errors = hmmerStore.errors;
       } catch (error) {
         console.error("An error occurred during validation:", error);
       }

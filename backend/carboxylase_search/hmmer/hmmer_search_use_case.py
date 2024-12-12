@@ -21,7 +21,7 @@ def run_hmmer_workflow(hmm_file_location, seq_file_location, save_file_location)
     plot_hmmer_results(hits, sequences, save_file_location)
 
 def run_hmmer_workflow_for_all_profiles(repository, seq_file_location, save_file_location):
-    hmm_profiles = repository.get_all_profiles();
+    hmm_profiles = repository.get_all_profiles()
     best_hits = []
     for profile in hmm_profiles:
         sequences, hits = run_hmmer_search(profile.content, seq_file_location)
@@ -29,7 +29,14 @@ def run_hmmer_workflow_for_all_profiles(repository, seq_file_location, save_file
             best_hit = min(hits, key=lambda hit: hit.evalue)
             best_hits.append(best_hit)
 
-    plot_hmmer_results(best_hits, sequences, save_file_location)
+    best_hits_return_value = []
+    for hit in best_hits:
+        best_hits_return_value.append(HmmerSearchResult(pfam_domain=hit.name.decode(), e_value=hit.evalue, alignment=hit.domains[0].alignment))
+
+    basic_output_hmmer_results(best_hits)
+    #plot_hmmer_results(best_hits, sequences, save_file_location)
+    #test_plot(best_hits, sequences, save_file_location)
+    return best_hits_return_value
 
 def basic_output_hmmer_results(hits):
     # Show alignment on a basic level in the command line

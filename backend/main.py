@@ -5,6 +5,7 @@ CORS is enabled for all origins to allow cross-origin requests.
 
 """
 import tempfile
+from dataclasses import asdict
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -50,8 +51,9 @@ def hmmer_search():
     repository = HmmProfileRepository(hmm_file_location)
     seq_file_location = os.path.join(BASE_DIR, "backend/carboxylase_search/data_acquisition/out/ERZ477576_FASTA_predicted_cds.faa.gz")
     save_file_location = os.path.join(BASE_DIR, "backend/carboxylase_search/data_acquisition/out")
-    run_hmmer_workflow_for_all_profiles(repository, seq_file_location, save_file_location)
-    return jsonify(True)
+    best_hits = run_hmmer_workflow_for_all_profiles(repository, seq_file_location, save_file_location)
+    serialized_hits = [asdict(obj) for obj in best_hits]
+    return jsonify(serialized_hits)
 
 
 if __name__ == '__main__':

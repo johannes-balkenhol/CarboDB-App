@@ -8,6 +8,7 @@ export const useHmmerStore = defineStore('hmmer', () => {
     async function runHmmerSearch() {
         try{
             let response = await hmmerSearch();
+            return response.data;
         } catch (error) {
             errors.value.push("Unknown error");
             console.error('Error during file upload', error);
