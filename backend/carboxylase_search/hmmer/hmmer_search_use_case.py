@@ -10,19 +10,20 @@ from dna_features_viewer import GraphicFeature, GraphicRecord
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from backend.carboxylase_search.hmmer.hmmer_search_utils import run_hmmer_search, read_hmm_profile
-from backend.carboxylase_search.hmmer.plot_test import test_plot
 from backend.domain.HmmerSearchResult import HmmerSearchResult
 
 
 #Example data used link: https://www.ebi.ac.uk/metagenomics/api/v1/analyses/MGYA00383254/file/ERZ477576_FASTA_predicted_cds.faa.gz
 
 def run_hmmer_workflow(hmm_file_location, seq_file_location, save_file_location):
+    # runs hmm workflow for one hmm profile
     hmm_profile = read_hmm_profile(hmm_file_location)
     sequences, hits = run_hmmer_search(hmm_profile, seq_file_location)
     basic_output_hmmer_results(hits)
     plot_hmmer_results(hits, sequences, save_file_location)
 
 def run_hmmer_workflow_for_all_profiles(repository, seq_file_location, save_file_location):
+    # runs hmm workflow for all hmm profiles that are returned by the repository and selects only the top hits to plot
     hmm_profiles = repository.get_all_profiles()
     best_hits = []
     for profile in hmm_profiles:
@@ -36,8 +37,7 @@ def run_hmmer_workflow_for_all_profiles(repository, seq_file_location, save_file
         best_hits_return_value.append(HmmerSearchResult(pfam_domain=hit.name.decode(), e_value=hit.evalue, alignment=hit.domains[0].alignment))
 
     basic_output_hmmer_results(best_hits)
-    #plot_hmmer_results(best_hits, sequences, save_file_location)
-    #test_plot(best_hits, sequences, save_file_location)
+    plot_hmmer_results(best_hits, sequences, save_file_location)
     return best_hits_return_value
 
 def basic_output_hmmer_results(hits):
@@ -45,7 +45,7 @@ def basic_output_hmmer_results(hits):
     for hit in hits:
         print(f"Target: {hit.name.decode()}, E-value: {hit.evalue}, Alignment: {hit.domains[0].alignment}")
 
-def plot_hmmer_results(hits, sequences, save_file_location):
+def plot_hmmer_results(hits, sequences, save_file_location, image_name="/test.png"):
     # Dynamically set figure height based on the number of hits
     fig_height = max(6, len(hits) * 1.5)  # 1.5 inches per hit, minimum height of 6 inches
     fig = plt.figure(figsize=(12, fig_height))
@@ -70,7 +70,7 @@ def plot_hmmer_results(hits, sequences, save_file_location):
             for j, d in enumerate(hit.domains)
         ]
         length = len(seq_index[hit.name])
-        desc = seq_index[hit.name].description.decode()
+        desc = seq_index[hit.name].name.decode()
 
         # render the feature records with appropriate length
         record = GraphicRecord(sequence_length=length, features=features)
@@ -83,6 +83,6 @@ def plot_hmmer_results(hits, sequences, save_file_location):
     fig.tight_layout(pad=2.0)  # increase padding for better readability
 
     # Show the final figure
-    plt.savefig(save_file_location+"/test.png")
+    plt.savefig(save_file_location+image_name)
 
 
