@@ -11,5 +11,5 @@ class HmmProfileRepository:
         profiles = []
         for file_path in hmm_files:
                hmm = read_hmm_profile(file_path)
-               profiles.append(HmmProfile(name=os.path.basename(file_path), content=hmm))
+               profiles.append(HmmProfile(pfam_accession=os.path.basename(file_path)[:-4], content=hmm))
         return profiles
