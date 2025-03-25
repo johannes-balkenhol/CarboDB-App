@@ -1,1 +1,3 @@
 backend/carboxylase_search/data_acquisition/out/
+backend/carboxylase_search/prosite_scan/output/
+**/__pycache__/
