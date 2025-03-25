@@ -1,6 +1,6 @@
 <template>
   <div class="upload-error-wrapper">
-    <textarea></textarea>
+    <textarea v-model="fastaText" @blur="handleInputTextArea"></textarea>
     <div class="upload-wrapper"
          @drop.prevent="handleDrop"
          @dragenter.prevent
@@ -35,13 +35,28 @@ export default {
   data() {
     return {
       file: null,
+      fastaText: '',
       loadedFasta: {},
-      linesOfCSV: [],
       errors: [],
       isValid: false,
     }
   },
   methods: {
+    /**
+     * Handles the input by the textarea, by converting it to a file.
+     * @return {Promise<void>} Promise that resolves when the FASTA is successfully imported.
+     */
+     handleInputTextArea: async function() {
+      
+        
+      const blob = new Blob([this.fastaText], { type: "text/plain" });
+
+      const file = new File([blob], "pasted_fasta.fasta", { type: "text/plain" });
+
+      await this.importFasta(file);
+
+      
+    },
     /**
      * Return the font-awesome faFile Icon
      * @return {IconDefinition} faFile
