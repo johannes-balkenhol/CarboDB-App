@@ -41,7 +41,6 @@ def validate_fasta():
     file.save(file_path)
 
     is_valid = is_valid_fasta(file_path)
-    print("is valide: "+ is_valid+ " File Path: "+file_path)
 
     if not is_valid == True:
         os.remove(file_path)
