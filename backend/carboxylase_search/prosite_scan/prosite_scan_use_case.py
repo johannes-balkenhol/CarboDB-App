@@ -1,11 +1,6 @@
 import re
 from backend.carboxylase_search.prosite_scan.prosite_scan_utils import run_ps_scan_with_custom_profile
 from backend.domain.PrositeSearchResult import PrositeSearchResult
-from backend.repository.PrositePatternRepository import PrositePatternRepository
-
-base_dir_ = "/home/eva/PycharmProjects/Carboxylase_Server/"
-seq_file_location_ = "/home/eva/PycharmProjects/Carboxylase_Server/backend/carboxylase_search/data_acquisition/out/PF00016_hits.fasta"
-ps_scan_output_directory = "backend/carboxylase_search/prosite_scan/output"
 
 
 def run_prosite_scan_workflow_for_all_patterns(repository, base_dir, seq_file_location, ps_scan_output_directory):
@@ -74,5 +69,3 @@ def parse_prosite_scan_output(output_file_location):
         return []
 
 
-repository = PrositePatternRepository()
-run_prosite_scan_workflow_for_all_patterns(repository, base_dir_,seq_file_location_,ps_scan_output_directory)
