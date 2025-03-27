@@ -13,7 +13,7 @@
     </template>
     <template v-else>
       <font-awesome-icon font-awesome-icon :icon="faFileCsv()" class="icon upload-icon"></font-awesome-icon>
-      <span>{{ this.loadedFasta }}</span>
+      <span>File Id: {{ this.fileId }}</span>
     </template>
     <input @input="handleInput" id="importFile" type="file" style="display: none" />
     </div>
@@ -39,6 +39,7 @@ export default {
       loadedFasta: {},
       errors: [],
       isValid: false,
+      fileId: "",
     }
   },
   methods: {
@@ -112,6 +113,7 @@ export default {
         await validationStore.validateFastaInput(file);
 
         this.isValid = validationStore.isValid;
+        this.fileId = validationStore.fileId;
         this.errors = validationStore.errors;
       } catch (error) {
         console.error("An error occurred during validation:", error);

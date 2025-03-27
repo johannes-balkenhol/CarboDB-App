@@ -5,6 +5,7 @@ CORS is enabled for all origins to allow cross-origin requests.
 
 """
 import tempfile
+import uuid
 from dataclasses import asdict
 
 from flask import Flask, jsonify, request
@@ -17,6 +18,8 @@ from backend.repository.HmmProfileRepository import HmmProfileRepository
 app = Flask(__name__)
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))[:-7]
+UPLOADED_USER_DATA = "uploaded_user_data"
+os.makedirs(UPLOADED_USER_DATA, exist_ok=True)
 
 def create_app():
     """
@@ -30,19 +33,21 @@ def create_app():
     return app
 
 
-@app.route("/")
-def hello_world():
-    return "<p>Hello, World!</p>"
-
-
 @app.route("/validate-fasta", methods=['POST'])
 def validate_fasta():
     file = request.files['file']
+    file_id = str(uuid.uuid4())
+    file_path = os.path.join(UPLOADED_USER_DATA, file_id + ".fasta")
+    file.save(file_path)
 
-    with tempfile.NamedTemporaryFile(delete=True) as temp_file:
-        file.save(temp_file.name)
-        is_valid = is_valid_fasta(temp_file.name)
-    return jsonify(is_valid)
+    is_valid = is_valid_fasta(file_path)
+    print("is valide: "+ is_valid+ " File Path: "+file_path)
+
+    if not is_valid == True:
+        os.remove(file_path)
+        return jsonify({"is_valid": is_valid})
+
+    return jsonify({"is_valid": is_valid, "file_id": file_id})
 
 
 @app.route("/hmmer-search", methods=['POST'])
