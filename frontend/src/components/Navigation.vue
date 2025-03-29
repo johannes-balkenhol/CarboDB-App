@@ -6,7 +6,7 @@ export default {
 
 <template>
   <div class="navigation">
-    <router-link class="navigation-button" to="/" >Home</router-link>
+    <router-link class="navigation-button" to="/home">Home</router-link>
     <router-link class="navigation-button" to="/hmmer-search">Hmmer search</router-link>
     <router-link class="navigation-button" to="/blast-search">Blast search</router-link>
   </div>

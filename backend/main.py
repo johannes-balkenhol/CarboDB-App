@@ -61,7 +61,12 @@ def hmmer_search():
 
     hmmer_hits = run_hmmer_workflow_for_all_profiles(repository, seq_file_location)
 
-    return jsonify(hmmer_hits)
+    json_ready_hits = {
+        key: [hit.to_dict() for hit in value]
+        for key, value in hmmer_hits.items()
+    }
+
+    return jsonify(json_ready_hits)
 
 
 if __name__ == '__main__':

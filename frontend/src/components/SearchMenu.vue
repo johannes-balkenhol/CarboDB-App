@@ -40,7 +40,8 @@ export default {
       const hmmerStore = useHmmerStore();
       
       try {
-        let response = await hmmerStore.runHmmerSearch(this.validationStore.fileId);
+        let searchResult = await hmmerStore.runHmmerSearch(this.validationStore.fileId);
+        
         this.errors = hmmerStore.errors;
       } catch (error) {
         console.error("An error occurred during validation:", error);

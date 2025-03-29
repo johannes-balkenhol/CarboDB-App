@@ -6,13 +6,13 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: '/',
+      path: '/home',
       name: 'home',
       component: HomeView,
     },
     {
       path: '/hmmer-search',
-      name: 'home',
+      name: 'hmmer-search',
       component: HmmerSearchView,
     },
     {
