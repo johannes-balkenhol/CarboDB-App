@@ -51,13 +51,17 @@ def validate_fasta():
 
 @app.route("/hmmer-search", methods=['POST'])
 def hmmer_search():
+    data = request.get_json()
+    file_id = data.get('fileId')
+
     hmm_file_location = os.path.join(BASE_DIR, "resources/carboxylases/hmmers2")
     repository = HmmProfileRepository(hmm_file_location)
-    seq_file_location = os.path.join(BASE_DIR, "backend/carboxylase_search/data_acquisition/out/ERZ477576_FASTA_predicted_cds.faa.gz")
-    save_file_location = os.path.join(BASE_DIR, "backend/carboxylase_search/data_acquisition/out")
-    best_hits = run_hmmer_workflow_for_all_profiles(repository, seq_file_location, save_file_location)
-    serialized_hits = [asdict(obj) for obj in best_hits]
-    return jsonify(serialized_hits)
+
+    seq_file_location = os.path.join(UPLOADED_USER_DATA, file_id + ".fasta")
+
+    hmmer_hits = run_hmmer_workflow_for_all_profiles(repository, seq_file_location)
+
+    return jsonify(hmmer_hits)
 
 
 if __name__ == '__main__':

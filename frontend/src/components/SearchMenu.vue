@@ -12,6 +12,7 @@
 </template>
   
 <script>
+import { useValidationStore } from '@/stores/validation';
 import FileUpload from './FileUpload.vue';
 import { useHmmerStore } from "@/stores/hmmer.js";
   
@@ -29,12 +30,17 @@ export default {
       required: true,
     }
   },
+  setup() {
+    const validationStore = useValidationStore();
+
+    return { validationStore };
+  },
   methods: {
     async runHmmerSearch() {
-      const hmmerStore = useHmmerStore()
+      const hmmerStore = useHmmerStore();
+      
       try {
-        let response = await hmmerStore.runHmmerSearch();
-        console.log(response)
+        let response = await hmmerStore.runHmmerSearch(this.validationStore.fileId);
         this.errors = hmmerStore.errors;
       } catch (error) {
         console.error("An error occurred during validation:", error);
