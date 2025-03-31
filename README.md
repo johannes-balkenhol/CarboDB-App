@@ -14,6 +14,7 @@
 - in terminal from project root ``cd backend``
 - ``conda install --file requirements.txt``
 - currently used conda channels: ``defaults, conda-forge, bioconda, anaconda``
+- channels can be added by ``conda config --add channels new_channel``
 - new requirements can be added by ``conda list -e > requirements.txt``
 #### Frontend
 - in terminal from project root ``cd frontend``
