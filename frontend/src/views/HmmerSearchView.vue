@@ -1,18 +1,25 @@
 <script setup>
 import SearchMenu from '@/components/SearchMenu.vue';
+import ResultList from '@/components/ResultList.vue';
 import { useValidationStore } from '@/stores/validation';
+import { ref } from 'vue';
 import { useHmmerStore } from "@/stores/hmmer.js";
 
+
 const validationStore = useValidationStore();
+const searchCompleted = ref(false);
+const searchResult = ref(null)
 
 const runHmmerSearch = async () => {
   const hmmerStore = useHmmerStore();
       
   try {
-    let searchResult = await hmmerStore.runHmmerSearch(validationStore.fileId);
-    console.log(searchResult)
+    let result = await hmmerStore.runHmmerSearch(validationStore.fileId);
         
-    
+    if(searchResult){
+      searchCompleted.value = true
+      searchResult.value = result
+    }
   } catch (error) {
       console.error("An error occurred during hmmerSearch:", error);
   }
@@ -23,8 +30,9 @@ const runHmmerSearch = async () => {
 
 <template>
   <main>
-    <SearchMenu heading="Hmmer Search" :search-method="runHmmerSearch">
+    <SearchMenu v-if="!searchCompleted" heading="Hmmer Search" :search-method="runHmmerSearch">
       <h1>Possibly insert settings for hmmer search</h1>
     </SearchMenu>
+    <ResultList v-else :search-result="searchResult"></ResultList>
   </main>
 </template>

@@ -14,6 +14,7 @@ import os
 from backend.carboxylase_search.hmmer.hmmer_search_use_case import run_hmmer_workflow_for_all_profiles
 from backend.carboxylase_search.validate_user_input.fasta_validator import is_valid_fasta
 from backend.repository.HmmProfileRepository import HmmProfileRepository
+from backend import run_all_searches
 
 app = Flask(__name__)
 
@@ -61,9 +62,14 @@ def hmmer_search():
 
     hmmer_hits = run_hmmer_workflow_for_all_profiles(repository, seq_file_location)
 
+    results_by_sequence = run_all_searches.collect_results_by_sequence([hmmer_hits])
+
     json_ready_hits = {
-        key: [hit.to_dict() for hit in value]
-        for key, value in hmmer_hits.items()
+        outer_key: {
+            inner_key: [hit.to_dict() for hit in inner_value]
+            for inner_key, inner_value in outer_value.items()
+        }
+        for outer_key, outer_value in results_by_sequence.items()
     }
 
     return jsonify(json_ready_hits)
