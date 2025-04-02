@@ -7,14 +7,12 @@
           <slot></slot>
         </div>
       </template>
-      <button class="button-action-big" @click.prevent="runHmmerSearch">Start search</button>
+      <button class="button-action-big" @click.prevent="runSearch">Start search</button>
     </div>
 </template>
   
 <script>
-import { useValidationStore } from '@/stores/validation';
 import FileUpload from './FileUpload.vue';
-import { useHmmerStore } from "@/stores/hmmer.js";
   
 export default {
   name: "SearchMenu",
@@ -28,28 +26,17 @@ export default {
     heading: {
       type: String, 
       required: true,
+    },
+    searchMethod: {
+      type: Function,
+      required: true,
     }
   },
-  setup() {
-    const validationStore = useValidationStore();
-
-    return { validationStore };
-  },
   methods: {
-    async runHmmerSearch() {
-      const hmmerStore = useHmmerStore();
-      
-      try {
-        let searchResult = await hmmerStore.runHmmerSearch(this.validationStore.fileId);
-        
-        this.errors = hmmerStore.errors;
-      } catch (error) {
-        console.error("An error occurred during validation:", error);
-      }
-    },
-            
+    async runSearch(){
+      await this.searchMethod()
+    }
   }
-
 }
     
 </script>
