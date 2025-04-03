@@ -7,19 +7,23 @@
           <slot></slot>
         </div>
       </template>
-      <button class="button-action-big" @click.prevent="runSearch">Start search</button>
+      <common-button 
+      :function="runSearch"
+      :label=buttonLabel
+      ></common-button>
     </div>
 </template>
   
 <script>
 import FileUpload from './FileUpload.vue';
+import CommonButton from './CommonButton.vue';
   
 export default {
   name: "SearchMenu",
-  components: { FileUpload },
+  components: { FileUpload, CommonButton },
   data() {
     return {
-            
+      buttonLabel: "Run Search"   
     }
   },
   props: {

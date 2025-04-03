@@ -160,8 +160,10 @@ input, textarea, select {
   padding: 12px 24px; 
   border: none;
   border-radius: 30px;
-  margin-top: 5px;
-  margin-left: 5px;
+  margin: 5px;
+  font-size: 16px;
+  min-width: 120px;
+  height: 45px;
 }
 
 .button-action-big:hover {
