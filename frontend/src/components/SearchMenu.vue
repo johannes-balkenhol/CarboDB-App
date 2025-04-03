@@ -1,5 +1,5 @@
 <template>
-    <div class="common-search-wrapper">
+    <div class="common-wrapper">
       <h2 class="h2">{{ this.heading }}</h2>
       <template class="flexbox">
         <FileUpload></FileUpload>
@@ -41,10 +41,6 @@ export default {
     
 </script>
 <style>
-.common-search-wrapper {
-  margin: 20px 0 0 30px;
-}
-
 .search-slot-wrapper {
   margin-left: 100px;
 }

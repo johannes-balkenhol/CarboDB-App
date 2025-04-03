@@ -1,7 +1,13 @@
 <template>
-    <div class="result-list-wrapper">
+    <div class="common-wrapper">
       <h2 class="h2">Results of your search</h2>
-      <table>
+      <table class="full-width-table">
+        <colgroup>
+          <col style="width: 40%;">
+          <col style="width: 20%;">
+          <col style="width: 20%;">
+          <col style="width: 20%;">
+        </colgroup>
         <thead>
           <tr>
             <th>Sequence Id</th>
@@ -34,17 +40,21 @@ export default {
       type: Object,
       required: true
     }
-  },
-  data() {
-    return {
-            
-    }
-  },
-  methods: {
-    
-            
   }
-
 }
     
 </script>
+<style>
+.full-width-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.full-width-table th,
+.full-width-table td {
+    text-align: left;
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+</style>

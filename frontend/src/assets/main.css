@@ -5,7 +5,8 @@
   font-weight: normal;
   text-align: left;
   margin: 0 auto;
-  margin-top: 10px;
+  margin-top: 20px;
+  margin-bottom: 20px;
   background-color: var(--color-background);
 }
 
@@ -206,6 +207,14 @@ input, textarea, select {
 
 .error {
   border: 2px solid var(--color-red);
+}
+
+.common-wrapper {
+  margin: 20px 30px 0 30px;
+}
+
+li {
+  list-style-type: none;
 }
 
 /* Globally used styling */
