@@ -1,19 +1,20 @@
 <script setup>
 import SearchMenu from '@/components/SearchMenu.vue';
 import ResultList from '@/components/ResultList.vue';
+import CommonButton from '@/components/CommonButton.vue';
 import { useValidationStore } from '@/stores/validation';
 import { ref, computed } from 'vue';
 import { useHmmerStore } from "@/stores/hmmer.js";
 
 
 const validationStore = useValidationStore();
+const hmmerStore = useHmmerStore();
 let hasFileId = computed(() => validationStore.fileId.length > 0)
 const searchCompleted = ref(false);
 const searchResult = ref(null)
+const downloadButtonLabel = "Download Results"
 
-const runHmmerSearch = async () => {
-  const hmmerStore = useHmmerStore();
-      
+const runHmmerSearch = async () => { 
   try {
     let result = await hmmerStore.runHmmerSearch(validationStore.fileId);
         
@@ -25,6 +26,10 @@ const runHmmerSearch = async () => {
       console.error("An error occurred during hmmerSearch:", error);
   }
   
+};
+
+const runDownloadResults = async () => {
+  await hmmerStore.runDownloadResults(validationStore.fileId)
 };
 
 </script>
@@ -39,6 +44,11 @@ const runHmmerSearch = async () => {
     >
       <h1>Possibly insert settings for hmmer search</h1>
     </SearchMenu>
-    <ResultList v-else :search-result="searchResult"></ResultList>
+    <ResultList v-else :search-result="searchResult">
+      <CommonButton 
+      :label="downloadButtonLabel"
+      :function="runDownloadResults"
+      ></CommonButton>
+    </ResultList>
   </main>
 </template>

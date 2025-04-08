@@ -1,6 +1,10 @@
 <template>
     <div class="common-wrapper">
-      <h2 class="h2">Results of your search</h2>
+      <div style="display: flex; justify-content: space-between;">
+        <h2 class="h2">Results of your search</h2>
+        <slot></slot>
+      </div>
+     
       <table class="full-width-table">
         <colgroup>
           <col style="width: 40%;">
@@ -28,6 +32,7 @@
 </template>
   
 <script>
+import CommonButton from './CommonButton.vue';
 import ResultListItem from './ResultListItem.vue';
   
 export default {

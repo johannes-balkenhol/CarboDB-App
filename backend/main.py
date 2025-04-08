@@ -5,7 +5,7 @@ CORS is enabled for all origins to allow cross-origin requests.
 
 """
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 import os
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -14,6 +14,7 @@ from backend.carboxylase_search.hmmer.hmmer_search_use_case import run_hmmer_wor
 from backend.carboxylase_search.validate_user_input.validate_fasta_input import validate_fasta_input
 from backend.repository.HmmProfileRepository import HmmProfileRepository
 from backend import run_all_searches
+from backend.carboxylase_search.export_as_pdf import export_hits_to_pdf
 
 app = Flask(__name__)
 
@@ -68,6 +69,10 @@ def hmmer_search():
 
     results_by_sequence = run_all_searches.collect_results_by_sequence([hmmer_hits])
 
+    filename_pdf = f"{file_id}.pdf"
+    file_path_pdf = os.path.join(UPLOADED_USER_DATA_FOLDER, filename_pdf)
+    export_hits_to_pdf(results_by_sequence, file_path_pdf)
+
     json_ready_hits = {
         outer_key: {
             inner_key: [hit.to_dict() for hit in inner_value]
@@ -77,6 +82,21 @@ def hmmer_search():
     }
 
     return jsonify(json_ready_hits)
+
+@app.route("/download-results", methods=['GET'])
+def download_results():
+    file_id = request.args.get('fileId')
+
+    filename_pdf = f"{file_id}.pdf"
+    file_path_pdf = os.path.join(UPLOADED_USER_DATA_FOLDER, filename_pdf)
+
+    try:
+        return send_file(file_path_pdf, mimetype='application/pdf', as_attachment=True)
+    except FileNotFoundError:
+        return jsonify({"error": "The requested PDF was not found."}), 404
+    except Exception as e:
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
 
 if __name__ == '__main__':
     create_app()
