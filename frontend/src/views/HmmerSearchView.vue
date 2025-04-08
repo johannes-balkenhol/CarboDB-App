@@ -2,11 +2,12 @@
 import SearchMenu from '@/components/SearchMenu.vue';
 import ResultList from '@/components/ResultList.vue';
 import { useValidationStore } from '@/stores/validation';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useHmmerStore } from "@/stores/hmmer.js";
 
 
 const validationStore = useValidationStore();
+let hasFileId = computed(() => validationStore.fileId.length > 0)
 const searchCompleted = ref(false);
 const searchResult = ref(null)
 
@@ -30,7 +31,12 @@ const runHmmerSearch = async () => {
 
 <template>
   <main>
-    <SearchMenu v-if="!searchCompleted" heading="Hmmer Search" :search-method="runHmmerSearch">
+    <SearchMenu 
+    v-if="!searchCompleted" 
+    heading="Hmmer Search"
+    :search-method="runHmmerSearch"
+    :button-disabled="!hasFileId"
+    >
       <h1>Possibly insert settings for hmmer search</h1>
     </SearchMenu>
     <ResultList v-else :search-result="searchResult"></ResultList>

@@ -10,6 +10,7 @@
       <common-button 
       :function="runSearch"
       :label=buttonLabel
+      :is-disabled="buttonDisabled"
       ></common-button>
     </div>
 </template>
@@ -34,6 +35,9 @@ export default {
     searchMethod: {
       type: Function,
       required: true,
+    },
+    buttonDisabled: {
+      type: Boolean
     }
   },
   methods: {

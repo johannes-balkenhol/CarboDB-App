@@ -1,7 +1,7 @@
 <template>
   <button 
     class="button-action-big"
-    :class="isLoading ? 'disabled' : ''"
+    :class="isLoading || isDisabled ? 'disabled' : ''"
     @click.prevent="runFunction"
   >
     <span class="loader" v-if="this.isLoading"></span>
@@ -26,6 +26,9 @@ export default {
     label: {
       type: String,
       required: true,  
+    }, 
+    isDisabled: {
+      type: Boolean
     }
   },
   methods: {
