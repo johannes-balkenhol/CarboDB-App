@@ -22,6 +22,7 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))[:-7]
 UPLOADED_USER_DATA_FOLDER = "uploaded_user_data"
 ALLOWED_FILE_EXTENSIONS = {'.fasta'}
 MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 M
+MAX_CONTENT_LENGTH_STRING = "16 MB"
 os.makedirs(UPLOADED_USER_DATA_FOLDER, exist_ok=True)
 
 def create_app():
@@ -40,12 +41,9 @@ def validate_fasta():
     file = request.files['file']
     return validate_fasta_input(file, ALLOWED_FILE_EXTENSIONS, UPLOADED_USER_DATA_FOLDER)
 
-    if not is_valid == True:
-        os.remove(file_path)
-        return jsonify({"is_valid": is_valid})
-
-    return jsonify({"is_valid": is_valid, "file_id": file_id})
-
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    return jsonify(error=f"The file exceeds the maximum file size of {MAX_CONTENT_LENGTH_STRING}"), 413
 
 @app.route("/hmmer-search", methods=['POST'])
 def hmmer_search():
