@@ -3,6 +3,7 @@
 # platform: linux-64
 _libgcc_mutex=0.1=conda_forge
 _openmp_mutex=4.5=2_gnu
+apscheduler=3.11.0=pyh29332c3_0
 biopython=1.78=py312h5eee18b_0
 blas=1.0=mkl
 blast=2.16.0=hc155240_3
@@ -13,9 +14,9 @@ brotli-bin=1.0.9=h5eee18b_8
 brotli-python=1.0.9=py312h6a678d5_8
 bzip2=1.0.8=h5eee18b_6
 c-ares=1.19.1=h5eee18b_0
-ca-certificates=2025.1.31=hbcca054_0
+ca-certificates=2025.2.25=h06a4308_0
 cairo=1.16.0=hb05425b_5
-certifi=2025.1.31=pyhd8ed1ab_0
+certifi=2025.1.31=py312h06a4308_0
 chardet=5.2.0=pyhd8ed1ab_3
 charset-normalizer=3.3.2=pyhd3eb1b0_0
 click=8.1.7=py312h06a4308_0
@@ -171,6 +172,7 @@ tk=8.6.14=h39e8969_0
 tomli=2.0.1=py312h06a4308_1
 tornado=6.4.1=py312h5eee18b_0
 tzdata=2024b=h04d1e81_0
+tzlocal=5.2=py312h06a4308_0
 unicodedata2=15.1.0=py312h5eee18b_0
 urllib3=2.2.3=py312h06a4308_0
 werkzeug=3.0.6=py312h06a4308_0
