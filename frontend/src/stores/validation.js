@@ -8,15 +8,25 @@ export const useValidationStore = defineStore('validation', () => {
     let errors = ref([]);
 
     async function validateFastaInput(file) {
+        errors.value = [];
         try{
-            let response = await validateFasta(file);
-            isValid.value = response.data.is_valid;
-            if(isValid.value){
+            const response = await validateFasta(file);
+            if(response.data.is_valid === true){
+                isValid.value = response.data.is_valid;
                 fileId.value = response.data.file_id;
+            }else{
+                isValid.value = false;
+                errors.value.push(response.data.is_valid)
             }
         } catch (error) {
-            errors.value.push("Unknown error");
-            console.error('Error during file upload', error);
+            if (error.response) {
+                const errorMessage = error.response.data.error || "An unknown error occurred";
+                errors.value.push(errorMessage);
+                console.error('Error during file upload:', errorMessage);
+            } else {
+                errors.value.push("Network or server error.");
+                console.error('Error during file upload:', error);
+            }
         }
     }
 

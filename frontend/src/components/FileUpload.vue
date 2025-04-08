@@ -1,6 +1,10 @@
 <template>
   <div class="upload-error-wrapper">
-    <textarea v-model="fastaText" @blur="handleInputTextArea"></textarea>
+    <textarea 
+    v-model="fastaText" 
+    @blur="handleInputTextArea"
+    placeholder="Please insert protein sequence(s) in Fasta-Format"
+    ></textarea>
     <div class="upload-wrapper"
          @drop.prevent="handleDrop"
          @dragenter.prevent
@@ -56,7 +60,6 @@ export default {
 
       await this.importFasta(file);
 
-      
     },
     /**
      * Return the font-awesome faFile Icon
@@ -114,7 +117,7 @@ export default {
 
         this.isValid = validationStore.isValid;
         this.fileId = validationStore.fileId;
-        this.errors = validationStore.errors;
+        this.errors = validationStore.errors;  
       } catch (error) {
         console.error("An error occurred during validation:", error);
       }
@@ -126,9 +129,9 @@ export default {
      */
     async importFasta(file) {
       await this.validateInput(file);
-      this.errors = [];
 
       if(this.isValid == true){
+        this.errors = []
         /** Use FileReader to read the file */
         const reader = new FileReader();
 
@@ -145,9 +148,7 @@ export default {
           console.error("Error reading file: " + file.name);
         };
       }
-      else {
-        this.errors.push(this.isValid);
-      }
+      
 
     },
   },
