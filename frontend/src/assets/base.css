@@ -6,6 +6,7 @@
   --color-light-grey-transparent: #D9D9D960;
   --color-grey: #9e9b9b;
   --color-grey-transparent: #9e9b9b80;
+  --color-dark-grey-transparent: #00000080;
 
   --color-black: #12130F;
   --color-black-transparent: #12130F60;
@@ -35,6 +36,7 @@
 :root {
   --color-body: var(--color-dark-blue-transparent);
   --color-background: var(--color-light-grey);
+  --color-background-overlay: var(--color-dark-grey-transparent);
   --color-navigation: var(--color-dark-blue);
   --color-navigation-hover: var(--color-blue);
 

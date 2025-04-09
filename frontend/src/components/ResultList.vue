@@ -21,45 +21,52 @@
           </tr>
         </thead>
         <tbody>
-          <result-list-item v-for="(result, key) in searchResult" 
-          :sequence-id="key"
-          :result="result"></result-list-item>
+          <result-list-item 
+            v-for="(result, key) in searchResult" 
+            :sequence-id="key"
+            :result="result"
+            @click="showDetails(key, result)"
+          ></result-list-item>
         </tbody>
       </table>
       
-
+       
+    <CommonModal v-if="selectedResult" @close="selectedResult = null">
+      <ResultDetail
+        :sequenceId="this.sequenceId"
+        :result="this.selectedResult"
+      ></ResultDetail>
+    </CommonModal>
     </div>
 </template>
   
 <script>
-import CommonButton from './CommonButton.vue';
+import CommonModal from './CommonModal.vue';
+import ResultDetail from './ResultDetail.vue';
 import ResultListItem from './ResultListItem.vue';
   
 export default {
   name: "ResultList",
   components: {
-    ResultListItem
+    ResultListItem, CommonModal, ResultDetail
   },
   props:{
     searchResult: {
       type: Object,
       required: true
     }
+  },
+  data() {
+    return {
+      sequenceId: null,
+      selectedResult: null
+    }
+  },
+  methods: {
+    showDetails(sequenceId, result) {
+      this.sequenceId = sequenceId
+      this.selectedResult = result
+    }
   }
-}
-    
+}   
 </script>
-<style>
-.full-width-table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-}
-
-.full-width-table th,
-.full-width-table td {
-    text-align: left;
-    border: 1px solid #ddd;
-    padding: 8px;
-}
-</style>
