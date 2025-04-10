@@ -82,6 +82,10 @@ li {
   padding: 8px;
 }
 
+.result-list-item:hover {
+  background-color: var(--color-grey-transparent);
+}
+
 
 /* Overlay for the modal covers the entire viewport */
 .overlay {

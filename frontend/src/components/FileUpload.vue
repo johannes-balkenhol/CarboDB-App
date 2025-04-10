@@ -4,6 +4,7 @@
     v-model="fastaText" 
     @blur="handleInputTextArea"
     placeholder="Please insert protein sequence(s) in Fasta-Format"
+    class="upload-textarea"
     ></textarea>
     <div class="upload-wrapper"
          @drop.prevent="handleDrop"
@@ -163,7 +164,7 @@ export default {
   background-color: var(--color-white);
   width: 400px;
   height: 100px;
-  border: 1px dashed var(--color-border);
+  border: 1px dashed var(--color-border-file-upload);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -178,7 +179,7 @@ export default {
   margin-bottom: 3px;
 }
 
-textarea {
+.upload-textarea {
   height: 200px;
   width: 400px;
   resize: none;

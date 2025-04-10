@@ -19,7 +19,6 @@ export default {
   flex-direction: row;
   align-items: center;
   background-color: var(--color-navigation);
-  
 }
 
 .navigation-button {
@@ -30,6 +29,7 @@ export default {
   background: var(--color-navigation);
   border: none;
   margin-left: 10px;
+  padding: 2px 10px;
 }
 
 .navigation-button:hover {

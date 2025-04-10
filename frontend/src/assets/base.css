@@ -1,32 +1,21 @@
-/* color palette from <https://github.com/vuejs/theme> */
+/* color palette */
 :root {
   --color-bright-white: #FFFFFF;
   --color-white: #EAE6E5;
   --color-light-grey: #D9D9D9;
-  --color-light-grey-transparent: #D9D9D960;
   --color-grey: #9e9b9b;
   --color-grey-transparent: #9e9b9b80;
   --color-dark-grey-transparent: #00000080;
 
   --color-black: #12130F;
-  --color-black-transparent: #12130F60;
 
   --color-green: #629677;
   --color-green-transparent: #62967780;
-  --color-light-green: #8FCB9B;
-  --color-light-green-transparent: #8FCB9B80;
-
 
   --color-dark-blue: #0A2239;
   --color-dark-blue-transparent: #0A223970;
   --color-blue: #505168;
-  --color-blue-2: #95AFC6;
-  --color-blue-2-transparent: #95AFC680;
-  --color-light-blue: #B9BACA;
-  --color-brown: #594236;
-
-  --color-midnight-green: #26777D;
-  --color-magenta: #7C606B;
+  --color-light-blue: #B9BACA;/*currently not in use*/
 
   --color-rose: #C2847A;
   --color-red: #e63022;
@@ -43,14 +32,10 @@
   --color-text: var(--color-black);
   --color-button: var(--color-green);
   --color-button-hover: var(--color-green-transparent);
-  --color-button-navigation: var(--color-black);
-  --color-button-navigation-hover: var(--color-black-transparent);
 
-  --color-border: var(--color-grey);
+  --color-border-file-upload: var(--color-grey);
 
   --color-error: var(--color-red);
-
-  --section-gap: 160px;
 }
 
 *,

@@ -26,6 +26,7 @@
             :sequence-id="key"
             :result="result"
             @click="showDetails(key, result)"
+            class="result-list-item"
           ></result-list-item>
         </tbody>
       </table>
