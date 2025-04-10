@@ -2,7 +2,9 @@
     <div class="common-wrapper">
       <div style="display: flex; justify-content: space-between;">
         <h2 class="h2">Results of your search</h2>
-        <slot></slot>
+        <div>
+          <slot></slot>
+        </div>
       </div>
      
       <table class="full-width-table">

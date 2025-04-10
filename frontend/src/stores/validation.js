@@ -9,6 +9,7 @@ export const useValidationStore = defineStore('validation', () => {
 
     async function validateFastaInput(file) {
         errors.value = [];
+        isValid.value = false;
         try{
             const response = await validateFasta(file);
             if(response.data.is_valid === true){
