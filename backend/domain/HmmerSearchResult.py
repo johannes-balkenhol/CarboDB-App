@@ -1,13 +1,14 @@
 import dataclasses
+from pyhmmer.plan7 import Alignment
+
 
 @dataclasses.dataclass
 class HmmerSearchResult:
-    def __init__(self,sequence_id, pfam_accession, e_value, alignment):
-        self.sequence_id = sequence_id
-        self.pfam_accession = pfam_accession
-        self.type = "Pfam hits"
-        self.e_value = e_value
-        self.alignment = alignment
+    sequence_id: str
+    pfam_accession: str
+    e_value: float
+    alignment: Alignment
+    type: str = "Pfam hits"
 
     def to_dict(self):
         return {
