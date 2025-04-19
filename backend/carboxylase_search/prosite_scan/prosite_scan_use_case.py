@@ -55,8 +55,8 @@ def parse_prosite_scan_output(output_file_location):
             #parse second part
             parts3 = re.split(r'\s{2}', result[1])
             parts4 = re.split(r'\s-\s', parts3[0])
-            start_position = parts4[0]
-            end_position = parts4[1]
+            start_position = int(parts4[0])
+            end_position = int(parts4[1])
             pattern_sequence = parts3[1].strip()
 
             current_search_result = PrositeSearchResult(sequence_id, prosite_accession, prosite_name, start_position, end_position, pattern_sequence)
