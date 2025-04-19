@@ -7,7 +7,6 @@ Created on Wed Oct 23 10:51:03 2024
 """
 from backend.carboxylase_search.hmmer.hmmer_search_utils import run_hmmer_search
 from backend.domain.HmmerSearchResult import HmmerSearchResult
-from backend.repository.HmmProfileRepository import HmmProfileRepository
 
 
 def run_hmmer_workflow_for_all_profiles(repository, seq_file_location):
