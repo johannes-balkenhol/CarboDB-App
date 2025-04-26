@@ -17,6 +17,7 @@ def create_app(config_class=BaseConfig):
     app.config.from_object(config_class)
 
     os.makedirs(app.config["UPLOADED_USER_DATA_FOLDER"], exist_ok=True)
+    os.makedirs(app.config["PROSITE_SCAN_OUTPUT_FOLDER"], exist_ok=True)
 
     def job_wrapper():
         with app.app_context():
