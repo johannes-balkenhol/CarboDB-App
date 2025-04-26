@@ -11,6 +11,7 @@ class BaseConfig:
     USER_DATA_CLEANUP_INTERVAL = 24  # hours
     UPLOADED_USER_DATA_FOLDER = "uploaded_user_data"
     UPLOADED_USER_DATA_FOLDER_PATH = os.path.join(BASE_DIR_BACKEND, UPLOADED_USER_DATA_FOLDER)
+    HMMER_PROFILE_FOLDER = os.path.join(BASE_DIR, "resources/carboxylases/hmm_profiles")
     PROSITE_SCAN_OUTPUT_FOLDER = os.path.join(BASE_DIR_BACKEND, "carboxylase_search/prosite_scan/output")
     ALLOWED_FILE_EXTENSIONS = {'.fasta'}
     MAX_CONTENT_LENGTH_STRING = "16 MB"

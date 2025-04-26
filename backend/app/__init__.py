@@ -5,7 +5,7 @@ from flask import Flask
 from flask_cors import CORS
 
 from .routes import main as main_blueprint
-from .tasks import scheduled_cleanup
+from .tasks import scheduled_cleanup_task
 from backend.config import BaseConfig
 
 
@@ -21,7 +21,7 @@ def create_app(config_class=BaseConfig):
 
     def job_wrapper():
         with app.app_context():
-            scheduled_cleanup()
+            scheduled_cleanup_task()
 
     scheduler = BackgroundScheduler()
     scheduler.add_job(func=job_wrapper, trigger='interval', hours=app.config['USER_DATA_CLEANUP_INTERVAL'])

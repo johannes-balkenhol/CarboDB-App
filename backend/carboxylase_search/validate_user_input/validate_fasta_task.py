@@ -3,7 +3,27 @@ import uuid
 from backend.carboxylase_search.validate_user_input.fasta_validator import is_valid_fasta
 from flask import jsonify
 
-def validate_fasta_input(file, allowed_file_extensions, uploaded_user_data_folder):
+def validate_fasta_task(file, allowed_file_extensions, uploaded_user_data_folder):
+    """
+        Validates an uploaded FASTA file.
+
+        Function checks if a file has been provided, verifies the file extension,
+        saves the file to the specified directory, and validates whether the file
+        content is a properly formatted FASTA file. If the file is valid, the function
+        returns the validation result and a generated file ID.
+
+        Args:
+            file: The uploaded file object.
+            allowed_file_extensions: List of allowed file extensions.
+            uploaded_user_data_folder: Path to the directory where uploaded files should be saved.
+
+        Returns:
+            flask.Response: A JSON response containing:
+                - "error" message and HTTP 400 status code if validation fails.
+                - "is_valid" (bool or str describing the issue) and HTTP 200 if validation succeeds or partially fails.
+                - "file_id" (str) if the file is valid.
+                - HTTP 500 and an error message if an unexpected exception occurs.
+        """
     if not file:
         return jsonify({"error": "No file provided"}), 400
 

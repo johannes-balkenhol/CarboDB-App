@@ -14,7 +14,7 @@ seq_file_location = "/home/eva/PycharmProjects/Carboxylase_Server/backend/carbox
 base_dir="/home/eva/PycharmProjects/Carboxylase_Server/"
 base_dir_backend="/home/eva/PycharmProjects/Carboxylase_Server/backend/"
 
-hmm_file_location = os.path.join(base_dir, "resources/carboxylases/hmmers")
+hmm_file_location = os.path.join(base_dir, "resources/carboxylases/hmm_profiles")
 pdf_save_location = os.path.join(base_dir_backend, "uploaded_user_data/test.pdf")
 seq_id_save_location = os.path.join(base_dir_backend, "uploaded_user_data/test.txt")
 ps_scan_output_directory = "backend/carboxylase_search/prosite_scan/output"
@@ -42,7 +42,7 @@ def collect_results_by_sequence(dict_list):
         dict_list: list of dictionaries returned by the different searches
 
     Returns:
-        dictionary with sequence ids as keys and the corresponding found search results as lists
+        A dictionary with sequence ids as keys and the corresponding search results as lists.
     """
     results_by_sequence = defaultdict(lambda: defaultdict(list))
 
