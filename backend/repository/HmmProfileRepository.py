@@ -1,6 +1,6 @@
 import os
 from backend.domain.HmmProfile import HmmProfile
-from backend.carboxylase_search.hmmer.hmmer_search_utils import read_hmm_profile
+from backend.carboxylase_search.hmmer_search.hmmer_search_utils import read_hmm_profile
 
 class HmmProfileRepository:
     def __init__(self, source):

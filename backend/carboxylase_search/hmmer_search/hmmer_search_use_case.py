@@ -5,7 +5,7 @@ Created on Wed Oct 23 10:51:03 2024
 
 @author: eva
 """
-from backend.carboxylase_search.hmmer.hmmer_search_utils import run_hmmer_search
+from backend.carboxylase_search.hmmer_search.hmmer_search_utils import run_hmmer_search
 from backend.domain.HmmerSearchResult import HmmerSearchResult
 
 

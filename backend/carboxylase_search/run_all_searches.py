@@ -4,7 +4,7 @@ from collections import defaultdict
 
 from backend.carboxylase_search.prosite_scan.prosite_scan_use_case import run_prosite_scan_workflow_for_all_patterns
 from backend.repository.HmmProfileRepository import HmmProfileRepository
-from backend.carboxylase_search.hmmer.hmmer_search_use_case import run_hmmer_workflow_for_all_profiles
+from backend.carboxylase_search.hmmer_search.hmmer_search_use_case import run_hmmer_workflow_for_all_profiles
 from backend.repository.PrositePatternRepository import PrositePatternRepository
 from backend.carboxylase_search import export_as_pdf
 

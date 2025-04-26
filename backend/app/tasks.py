@@ -3,7 +3,7 @@ import os
 from flask import current_app, send_file, jsonify
 from backend.app.utils import clean_user_uploads
 from backend.carboxylase_search.validate_user_input.validate_fasta_task import validate_fasta_task
-from backend.carboxylase_search.hmmer.hmmer_search_task import hmmer_search_task
+from backend.carboxylase_search.hmmer_search.hmmer_search_task import hmmer_search_task
 
 
 __all__ = [

@@ -3,7 +3,7 @@ import os
 from flask import current_app, jsonify
 
 from backend.carboxylase_search.export_as_pdf import export_hits_to_pdf
-from backend.carboxylase_search.hmmer.hmmer_search_use_case import run_hmmer_workflow_for_all_profiles
+from backend.carboxylase_search.hmmer_search.hmmer_search_use_case import run_hmmer_workflow_for_all_profiles
 from backend.carboxylase_search.run_all_searches import collect_results_by_sequence
 from backend.repository.HmmProfileRepository import HmmProfileRepository
 
