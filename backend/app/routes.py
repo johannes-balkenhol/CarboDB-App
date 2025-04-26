@@ -23,6 +23,13 @@ def hmmer_search():
     return hmmer_search_task(file_id)
 
 
+@main.route("/prosite-scan", methods=['POST'])
+def prosite_scan():
+    data = request.get_json()
+    file_id = data.get('fileId')
+    return prosite_scan_task(file_id)
+
+
 @main.route("/download-results", methods=['GET'])
 def download_results():
     file_id = request.args.get('fileId')

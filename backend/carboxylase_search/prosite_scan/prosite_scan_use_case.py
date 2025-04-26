@@ -10,6 +10,7 @@ def run_prosite_scan_workflow_for_all_patterns(repository, base_dir, seq_file_lo
         repository: PrositePatternRepository that return the prosite patterns to screen for
         base_dir: base directory where the project resides as determined dynamically in main.py
         seq_file_location: location of the file containing the sequences
+        ps_scan_output_directory: The directory where to safe the output.
 
     Returns:
         The compiled search results in a dictionary with the prosite accession numbers as keys and lists of PrositeSearchResult objects as values
