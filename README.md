@@ -20,8 +20,40 @@
 - in terminal from project root ``cd frontend``
 - [See frontend README.md](frontend/README.md)
 
-### General project structure
+## General project structure
 
-### Tests
+### Backend
+- config.py: configures basic properties of the app
+- main.py: runs the app
+
+#### App
+- \_\_init\_\_.py: contains information about the app initialization 
+e.g. the scheduler to delete contents from the user data folder
+- routes.py: contains the api endpoints of the app
+- tasks.py: contains general tasks not associated with a particular search method
+- utils.py: utility functions
+#### Carboxylase_search
+- contains functionalities for running the searches grouped by search
+- within each search there are utility functions, the actual use case for the search
+and 
+- the task that is run when their api endpoint is called
+- validate_user_input: contains functionalities to validate user input (fasta format)
+- contains the task to run all searches as well as some utils and pdf-export on top level
+#### Data_acquistion
+- contains a script that can collect predicted protein sequences from EMBL-EBI
+#### Domain
+- contains objects of the domain e.g. defines the properties of search results
+#### Repository
+- repositories for data used by the searches
+#### Tests
 Tests are implemented using ``pytest``. This command can be run to start the test suit.\
 To get a more detailed output use ``pytest -v``.
+#### Frontend
+- [See frontend README.md](frontend/README.md)
+#### Resources
+- contains resources like the HMM profiles, the prosite scan script and other information
+collected by Dila Piri
+
+
+
+
