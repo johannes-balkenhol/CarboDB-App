@@ -21,7 +21,7 @@ def run_prosite_scan_for_all_patterns(repository, base_dir, seq_file_location, p
     patterns = repository.get_all_patterns()
     for pattern in patterns:
         run_ps_scan_with_custom_profile(base_dir, seq_file_location, pattern, ps_scan_output_directory, pattern)
-        current_search_result = parse_prosite_scan_output(base_dir + ps_scan_output_directory + "/" + pattern)
+        current_search_result = parse_prosite_scan_output(ps_scan_output_directory + "/" + pattern)
         compiled_prosite_scan_results.update({pattern: current_search_result})
 
     return compiled_prosite_scan_results
@@ -63,7 +63,6 @@ def parse_prosite_scan_output(output_file_location):
             current_search_result = PrositeSearchResult(sequence_id, prosite_accession, prosite_name, start_position, end_position, pattern_sequence)
             prosite_search_results.append(current_search_result)
 
-        print(f"Contents successfully parsed from {output_file_location}")
         return prosite_search_results
     except Exception as e:
         print(f"An error occurred while parsing from file {output_file_location}: {e}")

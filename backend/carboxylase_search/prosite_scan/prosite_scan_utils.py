@@ -20,8 +20,7 @@ def run_ps_scan_with_custom_profile(base_dir, seq_file_location, pattern, ps_sca
         """
     ps_scan_file_location_absolute_path = base_dir + ps_scan_file_location
     ps_database_file_location_absolute_path = base_dir + ps_scan_database_file_location
-    ps_output_directory_absolute_path = base_dir + ps_scan_output_directory
-    print(ps_output_directory_absolute_path)
+    ps_output_directory_absolute_path = ps_scan_output_directory
 
     cmd = ("perl " + ps_scan_file_location_absolute_path + " -d " + ps_database_file_location_absolute_path + " -p "+ pattern + " "
            + seq_file_location + " > " + ps_output_directory_absolute_path + "/" + output_file_name)
