@@ -2,8 +2,9 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import hmmerSearch from "../../utils/commands/HmmerSearch.js";
 import downloadResults from '../../utils/commands/DownloadResults.js';
+import allSearches from '../../utils/commands/AllSearches.js';
 
-export const useHmmerStore = defineStore('hmmer', () => {
+export const useSearchStore = defineStore('searchStore', () => {
     let errors = ref([]);
 
     async function runHmmerSearch(fileId) {
@@ -14,6 +15,16 @@ export const useHmmerStore = defineStore('hmmer', () => {
             errors.value.push("Unknown error");
             console.error('Error during hmmer search', error);
         }
+    }
+
+    async function runAllSearches(fileId) {
+        try{
+            let response = await allSearches(fileId);
+            return response.data;
+        } catch (error) {
+            errors.value.push("Unknown error");
+            console.error('Error during all searches', error);
+        }   
     }
 
     async function runDownloadResults(fileId) {
@@ -37,5 +48,5 @@ export const useHmmerStore = defineStore('hmmer', () => {
         }
     }
 
-    return { runHmmerSearch, runDownloadResults, errors }
+    return { runHmmerSearch, runAllSearches, runDownloadResults, errors }
 })

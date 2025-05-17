@@ -12,12 +12,12 @@ const hmmerStore = useSearchStore();
 let hasFileId = computed(() => validationStore.fileId.length > 0)
 const searchCompleted = ref(false);
 const searchResult = ref(null)
-const newSearchButtonLabel = "New Hmmer search"
+const newSearchButtonLabel = "New search"
 const downloadButtonLabel = "Download Results"
 
-const runHmmerSearch = async () => { 
+const runAllSearches = async () => { 
   try {
-    let result = await hmmerStore.runHmmerSearch(validationStore.fileId);
+    let result = await hmmerStore.runAllSearches(validationStore.fileId);
         
     if(searchResult){
       searchCompleted.value = true;
@@ -45,11 +45,11 @@ const prepareToRunNewHmmerSearch = () => {
   <main>
     <SearchMenu 
     v-if="!searchCompleted" 
-      heading="Hmmer Search"
-      :search-method="runHmmerSearch"
+      heading="Run hmmer search and prosite scan"
+      :search-method="runAllSearches"
       :button-disabled="!hasFileId"
     >
-      <h1>Possibly insert settings for hmmer search</h1>
+      <h1>Possibly insert settings for searches</h1>
     </SearchMenu>
     <ResultList v-else :search-result="searchResult">
       <CommonButton
