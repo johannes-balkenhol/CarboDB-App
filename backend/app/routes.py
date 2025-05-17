@@ -1,6 +1,6 @@
 from flask import Blueprint, request, current_app, jsonify
 from backend.app.tasks import *
-
+from backend.carboxylase_search.run_all_searches_task import combined_search_task
 
 main = Blueprint('main', __name__)
 
@@ -28,6 +28,13 @@ def prosite_scan():
     data = request.get_json()
     file_id = data.get('fileId')
     return prosite_scan_task(file_id)
+
+
+@main.route("/all-searches", methods=['POST'])
+def all_searches():
+    data = request.get_json()
+    file_id = data.get('fileId')
+    return combined_search_task(file_id)
 
 
 @main.route("/download-results", methods=['GET'])

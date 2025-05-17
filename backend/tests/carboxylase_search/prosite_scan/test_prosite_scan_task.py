@@ -1,10 +1,10 @@
 from unittest.mock import patch, MagicMock
 from backend.carboxylase_search.prosite_scan.prosite_scan_task import prosite_scan_task
 
-@patch('backend.carboxylase_search.prosite_scan.prosite_scan_task.export_hits_to_pdf')
+@patch('backend.carboxylase_search.prosite_scan.prosite_scan_task.run_prosite_workflow')
 @patch('backend.carboxylase_search.prosite_scan.prosite_scan_task.collect_results_by_sequence')
-@patch('backend.carboxylase_search.prosite_scan.prosite_scan_task.run_prosite_scan_workflow_for_all_patterns')
-@patch('backend.carboxylase_search.prosite_scan.prosite_scan_task.PrositePatternRepository')
+@patch('backend.carboxylase_search.prosite_scan.prosite_scan_task.save_pdf')
+@patch('backend.carboxylase_search.prosite_scan.prosite_scan_task.jsonify_hits')
 def test_prosite_scan_task(mock_repository, mock_run_scan, mock_collect_results, mock_export_pdf, app):
     file_id = "testfile123"
 
@@ -17,10 +17,16 @@ def test_prosite_scan_task(mock_repository, mock_run_scan, mock_collect_results,
 
     fake_collected_results = {
         "seq1": {
-            "PATTERN1": [MagicMock(to_dict=lambda: {"mock_key": "mock_value"})]
+            "PATTERN1": [{"mock_key": "mock_value"}]
         }
     }
     mock_collect_results.return_value = fake_collected_results
+
+    # Return a fake Flask response from jsonify_hits
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.get_json.return_value = fake_collected_results
+    mock_repository.return_value = mock_response
 
     with app.app_context():
         response = prosite_scan_task(file_id)

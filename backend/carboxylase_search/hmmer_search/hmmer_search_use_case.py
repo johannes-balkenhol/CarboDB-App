@@ -9,7 +9,7 @@ from backend.carboxylase_search.hmmer_search.hmmer_search_utils import run_hmmer
 from backend.domain.HmmerSearchResult import HmmerSearchResult
 
 
-def run_hmmer_workflow_for_all_profiles(repository, seq_file_location):
+def run_hmmer_search_for_all_profiles(repository, seq_file_location):
     """
 
     Args:

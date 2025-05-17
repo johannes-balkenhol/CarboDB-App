@@ -1,5 +1,5 @@
 from unittest.mock import patch, MagicMock
-from backend.carboxylase_search.hmmer_search.hmmer_search_use_case import run_hmmer_workflow_for_all_profiles
+from backend.carboxylase_search.hmmer_search.hmmer_search_use_case import run_hmmer_search_for_all_profiles
 
 
 @patch('backend.carboxylase_search.hmmer_search.hmmer_search_use_case.run_hmmer_search')
@@ -20,7 +20,7 @@ def test_run_hmmer_workflow_for_all_profiles(mock_run_hmmer_search):
 
     mock_run_hmmer_search.return_value = ([], [fake_hit])
 
-    result = run_hmmer_workflow_for_all_profiles(fake_repository, "/fake/path/to/sequences.fasta")
+    result = run_hmmer_search_for_all_profiles(fake_repository, "/fake/path/to/sequences.fasta")
 
 
     assert "PF12345" in result

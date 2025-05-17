@@ -1,5 +1,5 @@
 from unittest.mock import patch, MagicMock, mock_open
-from backend.carboxylase_search.prosite_scan.prosite_scan_use_case import run_prosite_scan_workflow_for_all_patterns
+from backend.carboxylase_search.prosite_scan.prosite_scan_use_case import run_prosite_scan_for_all_patterns
 from backend.carboxylase_search.prosite_scan.prosite_scan_use_case import parse_prosite_scan_output
 
 @patch('backend.carboxylase_search.prosite_scan.prosite_scan_use_case.parse_prosite_scan_output')
@@ -18,7 +18,7 @@ def test_run_prosite_scan_workflow_for_all_patterns(mock_run_ps_scan, mock_parse
     output_dir = "/fake/output"
 
 
-    result = run_prosite_scan_workflow_for_all_patterns(fake_repository, base_dir, seq_file, output_dir)
+    result = run_prosite_scan_for_all_patterns(fake_repository, base_dir, seq_file, output_dir)
 
 
     assert "PATTERN1" in result

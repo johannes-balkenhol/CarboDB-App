@@ -3,7 +3,7 @@ from backend.carboxylase_search.prosite_scan.prosite_scan_utils import run_ps_sc
 from backend.domain.PrositeSearchResult import PrositeSearchResult
 
 
-def run_prosite_scan_workflow_for_all_patterns(repository, base_dir, seq_file_location, ps_scan_output_directory):
+def run_prosite_scan_for_all_patterns(repository, base_dir, seq_file_location, ps_scan_output_directory):
     """
 
     Args:

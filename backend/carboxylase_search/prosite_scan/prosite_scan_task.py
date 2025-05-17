@@ -1,10 +1,9 @@
 import os
 
-from flask import current_app, jsonify
+from flask import current_app
 
-from backend.carboxylase_search.export_as_pdf import export_hits_to_pdf
-from backend.carboxylase_search.prosite_scan.prosite_scan_use_case import run_prosite_scan_workflow_for_all_patterns
-from backend.carboxylase_search.run_all_searches import collect_results_by_sequence
+from backend.carboxylase_search.prosite_scan.prosite_scan_use_case import run_prosite_scan_for_all_patterns
+from backend.carboxylase_search.search_utils import collect_results_by_sequence, save_pdf, jsonify_hits
 from backend.repository.PrositePatternRepository import PrositePatternRepository
 
 
@@ -28,24 +27,29 @@ def prosite_scan_task(file_id):
                       ready for API consumption.
 
     """
+
+    prosite_hits = run_prosite_workflow(file_id)
+
+    results_by_sequence = collect_results_by_sequence([prosite_hits])
+
+    save_pdf(file_id, results_by_sequence)
+
+    return jsonify_hits(results_by_sequence)
+
+
+def run_prosite_workflow(file_id):
+    """
+        1. Initializes prosite pattern repository
+        2. Runs a prosite scan across all profiles against the input sequences.
+    Args:
+        file_id (str): Unique identifier for the uploaded FASTA file (without extension).
+
+    Returns:
+        The compiled search results in a dictionary with the prosite accession numbers as keys and lists of PrositeSearchResult objects as values
+    """
     repository = PrositePatternRepository()
 
     seq_file_location = os.path.join(current_app.config['UPLOADED_USER_DATA_FOLDER'], file_id + ".fasta")
 
-    prosite_hits = run_prosite_scan_workflow_for_all_patterns(repository, current_app.config['BASE_DIR'], seq_file_location, current_app.config['PROSITE_SCAN_OUTPUT_FOLDER'])
-
-    results_by_sequence = collect_results_by_sequence([prosite_hits])
-
-    filename_pdf = f"{file_id}.pdf"
-    file_path_pdf = os.path.join(current_app.config['UPLOADED_USER_DATA_FOLDER'], filename_pdf)
-    export_hits_to_pdf(results_by_sequence, file_path_pdf)
-
-    json_ready_hits = {
-        outer_key: {
-            inner_key: [hit.to_dict() for hit in inner_value]
-            for inner_key, inner_value in outer_value.items()
-        }
-        for outer_key, outer_value in results_by_sequence.items()
-    }
-
-    return jsonify(json_ready_hits)
+    return run_prosite_scan_for_all_patterns(repository, current_app.config['BASE_DIR'], seq_file_location,
+                                                     current_app.config['PROSITE_SCAN_OUTPUT_FOLDER'])
