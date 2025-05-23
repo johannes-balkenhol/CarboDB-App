@@ -48,9 +48,9 @@ and
 #### Tests
 Tests are implemented using ``pytest``. This command can be run to start the test suit.\
 To get a more detailed output use ``pytest -v``.
-#### Frontend
+### Frontend
 - [See frontend README.md](frontend/README.md)
-#### Resources
+### Resources
 - contains resources like the HMM profiles, the prosite scan script and other information
 collected by Dila Piri
 
