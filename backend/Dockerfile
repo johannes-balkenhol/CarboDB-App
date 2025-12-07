@@ -32,15 +32,15 @@ RUN micromamba install -y -n base numpy pandas matplotlib && \
 RUN micromamba install -y -n base apscheduler requests pytest && \
     micromamba clean --all --yes
 
-# Add py_fasta_validator (the missing package!)
 RUN micromamba install -y -n base py_fasta_validator -c bioconda && \
     micromamba clean --all --yes
 
 RUN (micromamba install -y -n base pyhmmer -c bioconda || true) && \
     micromamba clean --all --yes
 
+# Install plotly and other packages via pip
 RUN micromamba run -n base pip install --no-cache-dir \
-    reportlab werkzeug gunicorn || true
+    reportlab werkzeug gunicorn plotly
 
 COPY . /srv/app
 ENV PYTHONPATH=/srv/app
