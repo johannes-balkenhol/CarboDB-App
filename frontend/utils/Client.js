@@ -1,12 +1,12 @@
-import axios from 'axios';
+// frontend/utils/Client.js
+import axios from "axios";
 
-let baseUrl = 'http://127.0.0.1:5000';
+// Use env var if provided, otherwise default to the nginx proxy prefix
+const API_BASE = import.meta.env?.VITE_API_BASE || "/api";
 
-const Client = axios.create({
-  baseURL: baseUrl,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+const client = axios.create({
+  baseURL: API_BASE,
+  withCredentials: false,
 });
 
-export default Client;
+export default client;
