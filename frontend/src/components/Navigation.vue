@@ -3,15 +3,14 @@ export default {
   name: "Navigation"
 }
 </script>
-
 <template>
   <div class="navigation">
     <router-link class="navigation-button" to="/home">Home</router-link>
     <router-link class="navigation-button" to="/hmmer-search">Hmmer search</router-link>
     <router-link class="navigation-button" to="/all-searches">Combined searches</router-link>
+    <router-link class="navigation-button" to="/analysis">Sequence Analysis</router-link>
   </div>
 </template>
-
 <style scoped>
 .navigation {
   height: 30px;
@@ -20,7 +19,6 @@ export default {
   align-items: center;
   background-color: var(--color-navigation);
 }
-
 .navigation-button {
   height: 30px;
   color: var(--color-bright-white);
@@ -31,7 +29,6 @@ export default {
   margin-left: 10px;
   padding: 2px 10px;
 }
-
 .navigation-button:hover {
   color: var(--color-bright-white);
   background: var(--color-navigation-hover);
