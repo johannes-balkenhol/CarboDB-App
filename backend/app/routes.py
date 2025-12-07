@@ -6,8 +6,6 @@ from backend.app.plotly_visualizations import SequenceVisualizer
 
 main = Blueprint('main', __name__)
 
-# ===== EXISTING ENDPOINTS =====
-
 @main.route("/validate-fasta", methods=['POST'])
 def validate_fasta():
     file = request.files['file']
@@ -40,133 +38,53 @@ def download_results():
     file_id = request.args.get('fileId')
     return download_results_task(file_id)
 
-
-# ===== NEW ENDPOINTS - BioPython Analysis =====
-
 @main.route('/analyze-sequence', methods=['POST'])
 def analyze_sequence():
-    """
-    Analyze a protein sequence using BioPython
-    
-    Request JSON: {"sequence": "MKALVLGFGKGQQQQK"}
-    """
     try:
         data = request.get_json()
-        
         if not data or 'sequence' not in data:
-            return jsonify({
-                'success': False,
-                'error': 'No sequence provided'
-            }), 400
-        
+            return jsonify({'success': False, 'error': 'No sequence provided'}), 400
         sequence = data.get('sequence', '').strip()
-        
         if not sequence:
-            return jsonify({
-                'success': False,
-                'error': 'Empty sequence'
-            }), 400
-        
-        # Analyze sequence
+            return jsonify({'success': False, 'error': 'Empty sequence'}), 400
         analyzer = QuickSequenceAnalyzer(sequence)
         analysis = analyzer.complete_analysis()
-        
-        return jsonify({
-            'success': True,
-            'analysis': analysis
-        })
-        
+        return jsonify({'success': True, 'analysis': analysis})
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @main.route('/visualize-sequence', methods=['POST'])
 def visualize_sequence():
-    """
-    Create Plotly visualizations for a protein sequence
-    
-    Request JSON: {"sequence": "MKALVLGFGKGQQQQK"}
-    """
     try:
         data = request.get_json()
-        
         if not data or 'sequence' not in data:
-            return jsonify({
-                'success': False,
-                'error': 'No sequence provided'
-            }), 400
-        
+            return jsonify({'success': False, 'error': 'No sequence provided'}), 400
         sequence = data.get('sequence', '').strip()
-        
         if not sequence:
-            return jsonify({
-                'success': False,
-                'error': 'Empty sequence'
-            }), 400
-        
-        # Analyze sequence first
+            return jsonify({'success': False, 'error': 'Empty sequence'}), 400
         analyzer = QuickSequenceAnalyzer(sequence)
         analysis = analyzer.complete_analysis()
-        
-        # Create visualizations
         visualizer = SequenceVisualizer(sequence, analysis)
         charts = visualizer.create_all_charts()
-        
-        return jsonify({
-            'success': True,
-            'charts': charts
-        })
-        
+        return jsonify({'success': True, 'charts': charts})
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # InterPro Integration
-from app.interpro_features import extract_uniprot_id, get_interpro_annotations, get_alphafold_url
+from backend.app.interpro_features import extract_uniprot_id, get_interpro_annotations, get_alphafold_url
 
 @main.route("/interpro/<uniprot_id>", methods=['GET'])
 def interpro_lookup(uniprot_id):
-    """Get InterPro annotations for a UniProt ID."""
     result = get_interpro_annotations(uniprot_id)
     return jsonify(result)
 
 @main.route("/alphafold/<uniprot_id>", methods=['GET'])
 def alphafold_lookup(uniprot_id):
-    """Get AlphaFold structure info for a UniProt ID."""
     result = get_alphafold_url(uniprot_id)
     return jsonify(result)
 
 @main.route("/extract-uniprot", methods=['POST'])
 def extract_uniprot():
-    """Extract UniProt ID from FASTA header."""
-    data = request.get_json()
-    header = data.get('header', '')
-    uniprot_id = extract_uniprot_id(header)
-    return jsonify({"uniprot_id": uniprot_id})
-
-# InterPro Integration
-from app.interpro_features import extract_uniprot_id, get_interpro_annotations, get_alphafold_url
-
-@main.route("/interpro/<uniprot_id>", methods=['GET'])
-def interpro_lookup(uniprot_id):
-    """Get InterPro annotations for a UniProt ID."""
-    result = get_interpro_annotations(uniprot_id)
-    return jsonify(result)
-
-@main.route("/alphafold/<uniprot_id>", methods=['GET'])
-def alphafold_lookup(uniprot_id):
-    """Get AlphaFold structure info for a UniProt ID."""
-    result = get_alphafold_url(uniprot_id)
-    return jsonify(result)
-
-@main.route("/extract-uniprot", methods=['POST'])
-def extract_uniprot():
-    """Extract UniProt ID from FASTA header."""
     data = request.get_json()
     header = data.get('header', '')
     uniprot_id = extract_uniprot_id(header)
