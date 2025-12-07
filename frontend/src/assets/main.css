@@ -1,0 +1,175 @@
+@import './base.css';
+
+#app {
+  width: 80vw;
+  font-weight: normal;
+  text-align: left;
+  margin: 0 auto;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  background-color: var(--color-background);
+}
+
+/*Headings*/
+
+.h1 {
+  margin: 10px 0 10px 30px;
+}
+
+.h2 {
+  margin: 0 0 5px 0;
+}
+
+/*Common styling of elements*/
+
+input, textarea {
+  padding: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+.common-wrapper {
+  margin: 20px 30px 0 30px;
+}
+
+li {
+  list-style-type: none;
+}
+
+/*Disabled and error styling*/
+
+.disabled {
+  pointer-events: none;
+  background-color:var(--color-light-grey);
+  color: var(--color-grey);
+  border: 1px solid grey;
+}
+
+.error-wrapper {
+  margin-left: 10px;
+  min-height: 50px;
+  color: var(--color-error);
+  font-size: 0.9em;
+  visibility: hidden;
+}
+
+.error-wrapper.visible {
+  visibility: visible;
+}
+
+.error-wrapper ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.error-wrapper li {
+  margin-top: 2px;
+}
+
+/*Table styling*/
+.full-width-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.full-width-table th,
+.full-width-table td {
+  text-align: left;
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.result-list-item:hover {
+  background-color: var(--color-grey-transparent);
+}
+
+
+/* Overlay for the modal covers the entire viewport */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--color-background-overlay);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: var(--color-bright-white);
+  padding: 10px 30px 20px 30px;
+  border-radius: 10px;
+  width: 60%;
+  max-height: 80%;
+  overflow-y: auto;
+  position: relative;
+}
+
+.modal-button-wrapper {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/*Button Design*/
+
+.button-action {
+  background: var(--color-button);
+  padding: 8px 16px; 
+  border: none;
+  border-radius: 30px;
+  margin-top: 5px;
+  margin-left: 5px;
+}
+
+.button-action:hover {
+  background: var(--color-button-hover);
+}
+
+.button-action-big {
+  background: var(--color-button);
+  padding: 12px 24px; 
+  border: none;
+  border-radius: 30px;
+  margin: 5px;
+  font-size: 16px;
+  min-width: 120px;
+  height: 45px;
+}
+
+.button-action-big:hover {
+  background: var(--color-button-hover);
+}
+
+.button-cancel {
+  background: var(--color-rose);
+  padding: 1vh 2vh 1vh 2vh;
+  border: none;
+  border-radius: 30px;
+  margin-top: 5px;
+}
+
+.button-cancel:hover {
+  background: var(--color-light-grey);
+}
+
+/*Styling for icons from FontAwesome*/
+
+.icon {
+  font-size: 30px;
+}
+
+/* Globally used styling */
+
+body {
+  display: flex;
+}
+
+.flexbox {
+  display: flex;
+}

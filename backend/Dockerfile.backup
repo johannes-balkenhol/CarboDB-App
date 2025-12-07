@@ -1,0 +1,49 @@
+# syntax=docker/dockerfile:1
+FROM mambaorg/micromamba:1.5.8
+USER root
+WORKDIR /srv/app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential libcairo2-dev pkg-config && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY backend/requirements.txt /tmp/conda-requirements.txt
+
+RUN micromamba config set channel_priority flexible && \
+    micromamba config set download_timeout 900 && \
+    micromamba config set connect_timeout 120 && \
+    micromamba config set read_timeout 600 && \
+    micromamba config set max_retries 15
+
+RUN micromamba config prepend channels conda-forge && \
+    micromamba config append channels bioconda && \
+    micromamba config append channels defaults
+
+RUN micromamba install -y -n base python=3.12 pip setuptools wheel hmmer blast pftools && \
+    micromamba clean --all --yes
+
+RUN micromamba run -n base pip install --no-cache-dir \
+    flask==3.0.3 flask-cors==5.0.0 biopython==1.81 pandas==2.0.0 numpy==1.24.0 \
+    matplotlib==3.7.0 apscheduler==3.10.0 requests==2.31.0 pytest==7.4.0 \
+    reportlab==4.0.0 pyhmmer==0.10.0 werkzeug==3.0.0 gunicorn
+
+COPY . /srv/app
+ENV PYTHONPATH=/srv/app
+
+RUN cat > /usr/local/bin/start-backend.sh <<'SH' && chmod +x /usr/local/bin/start-backend.sh
+#!/usr/bin/env bash
+set -e
+if micromamba run -n base python -c "from backend.app import create_app; import inspect; exit(0 if inspect.isfunction(create_app) else 1)" 2>/dev/null; then
+  exec micromamba run -n base gunicorn -w 2 -b 0.0.0.0:8000 "backend.app:create_app()"
+elif micromamba run -n base python -c "from backend.app import app; exit(0)" 2>/dev/null; then
+  exec micromamba run -n base gunicorn -w 2 -b 0.0.0.0:8000 backend.app:app
+else
+  export FLASK_APP=backend.app
+  export FLASK_RUN_HOST=0.0.0.0
+  export FLASK_RUN_PORT=8000
+  exec micromamba run -n base python -m flask run
+fi
+SH
+
+EXPOSE 8000
+CMD ["/usr/local/bin/start-backend.sh"]
