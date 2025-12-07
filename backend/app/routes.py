@@ -125,3 +125,49 @@ def visualize_sequence():
             'success': False,
             'error': str(e)
         }), 500
+
+# InterPro Integration
+from app.interpro_features import extract_uniprot_id, get_interpro_annotations, get_alphafold_url
+
+@main.route("/interpro/<uniprot_id>", methods=['GET'])
+def interpro_lookup(uniprot_id):
+    """Get InterPro annotations for a UniProt ID."""
+    result = get_interpro_annotations(uniprot_id)
+    return jsonify(result)
+
+@main.route("/alphafold/<uniprot_id>", methods=['GET'])
+def alphafold_lookup(uniprot_id):
+    """Get AlphaFold structure info for a UniProt ID."""
+    result = get_alphafold_url(uniprot_id)
+    return jsonify(result)
+
+@main.route("/extract-uniprot", methods=['POST'])
+def extract_uniprot():
+    """Extract UniProt ID from FASTA header."""
+    data = request.get_json()
+    header = data.get('header', '')
+    uniprot_id = extract_uniprot_id(header)
+    return jsonify({"uniprot_id": uniprot_id})
+
+# InterPro Integration
+from app.interpro_features import extract_uniprot_id, get_interpro_annotations, get_alphafold_url
+
+@main.route("/interpro/<uniprot_id>", methods=['GET'])
+def interpro_lookup(uniprot_id):
+    """Get InterPro annotations for a UniProt ID."""
+    result = get_interpro_annotations(uniprot_id)
+    return jsonify(result)
+
+@main.route("/alphafold/<uniprot_id>", methods=['GET'])
+def alphafold_lookup(uniprot_id):
+    """Get AlphaFold structure info for a UniProt ID."""
+    result = get_alphafold_url(uniprot_id)
+    return jsonify(result)
+
+@main.route("/extract-uniprot", methods=['POST'])
+def extract_uniprot():
+    """Extract UniProt ID from FASTA header."""
+    data = request.get_json()
+    header = data.get('header', '')
+    uniprot_id = extract_uniprot_id(header)
+    return jsonify({"uniprot_id": uniprot_id})
