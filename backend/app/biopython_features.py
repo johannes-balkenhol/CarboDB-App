@@ -267,3 +267,29 @@ if __name__ == '__main__':
             print(f"  {motif}: Found {data['count']} match(es)")
             for match in data['matches']:
                 print(f"    Position {match['start']}-{match['end']}: {match['sequence']}")
+
+
+# Add direct PS00157 search (append to QuickSequenceAnalyzer class)
+def detect_rubisco_motifs_enhanced(self):
+    """Enhanced RuBisCO motif detection with direct PS00157 search"""
+    motifs = self.detect_rubisco_motifs()
+    
+    # Direct search for known PS00157 variants
+    ps00157_variants = [
+        'GLDFTKDDE',  # Most common
+        'GLDFTK',     # Partial
+        'DFTKDDE',    # Partial
+    ]
+    
+    for variant in ps00157_variants:
+        if variant in self.sequence:
+            pos = self.sequence.find(variant)
+            motifs['PS00157']['found'] = True
+            motifs['PS00157']['count'] += 1
+            motifs['PS00157']['matches'].append({
+                'start': pos + 1,
+                'end': pos + len(variant),
+                'sequence': variant
+            })
+    
+    return motifs
