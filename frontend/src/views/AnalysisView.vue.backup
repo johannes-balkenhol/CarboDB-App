@@ -160,33 +160,34 @@ const loadMolstar = async () => {
   if (molstarLoaded.value || !alphafoldData.value?.has_structure) return;
   
   await nextTick();
-  const container = document.getElementById("molstar-viewer");
+  const container = document.getElementById('molstar-viewer');
   if (!container) return;
   
-  container.innerHTML = "<div style=\"display:flex;align-items:center;justify-content:center;height:500px;\">Loading 3D structure...</div>";
+  // Clear container
+  container.innerHTML = '<div class="molstar-loading">Loading 3D structure...</div>';
   
   try {
-    const pdbUrl = alphafoldData.value.pdb_url;
-    const response = await fetch(pdbUrl);
-    const pdbData = await response.text();
+    // Create Mol* viewer using PDBe integration
+    const pdbUrl = `https://alphafold.ebi.ac.uk/files/AF-${uniprotId.value}-F1-model_v4.cif`;
     
-    container.innerHTML = "";
-    container.style.height = "500px";
-    container.style.position = "relative";
-    
-    const viewer = window.$3Dmol.createViewer(container, {
-      backgroundColor: "white"
-    });
-    
-    viewer.addModel(pdbData, "pdb");
-    viewer.setStyle({}, { cartoon: { color: "spectrum" } });
-    viewer.zoomTo();
-    viewer.render();
-    
+    // Use PDBe Molstar web component
+    container.innerHTML = `
+      <pdbe-molstar 
+        id="molstar-instance"
+        molecule-id="AF-${uniprotId.value}-F1"
+        custom-data-url="${pdbUrl}"
+        custom-data-format="cif"
+        hide-controls="false"
+        landscape="true"
+        subscribe-events="false"
+        bg-color-r="255" bg-color-g="255" bg-color-b="255"
+        style="width: 100%; height: 500px;">
+      </pdbe-molstar>
+    `;
     molstarLoaded.value = true;
   } catch (e) {
-    console.error("3Dmol error:", e);
-    container.innerHTML = `<div style="text-align:center;padding:40px;"><p>Could not load structure</p><a href="https://alphafold.ebi.ac.uk/entry/${uniprotId.value}" target="_blank" style="color:#667eea;">View on AlphaFold DB</a></div>`;
+    console.error('Molstar error:', e);
+    container.innerHTML = '<div class="molstar-error">Could not load 3D viewer</div>';
   }
 };
 
