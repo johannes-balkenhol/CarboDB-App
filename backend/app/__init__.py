@@ -8,7 +8,7 @@ from flask_cors import CORS
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from .routes import main as main_blueprint
+from .routes import main as main_blueprint, analysis_bp
 from .db_routes import db_bp
 from .tasks import scheduled_cleanup_task
 from backend.config import BaseConfig
@@ -41,6 +41,7 @@ def create_app(config_class=BaseConfig):
     # Register blueprints
     app.register_blueprint(main_blueprint)
     app.register_blueprint(db_bp)
+    app.register_blueprint(analysis_bp)
 
     # Enable CORS
     CORS(app, resources={r"/*": {"origins": "*"}})

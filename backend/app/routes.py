@@ -214,7 +214,7 @@ def internal_error(error):
         'error': 'Internal server error'
     }), 500
 from flask import Blueprint, request, jsonify
-from .batch_prediction import predict_batch_sequences
+from .batch_prediction import run_batch_prediction
 
 analysis_bp = Blueprint('analysis', __name__)
 
@@ -222,7 +222,7 @@ analysis_bp = Blueprint('analysis', __name__)
 @analysis_bp.route('/analyze-sequence', methods=['POST'])
 def analyze_comprehensive():
     """Alias for predict-batch - comprehensive analysis"""
-    return predict_batch_sequences()
+    data = request.get_json(); return jsonify(run_batch_prediction(data.get('fasta', '')))
 
 @analysis_bp.route('/validate-fasta', methods=['POST'])
 def validate_fasta():
