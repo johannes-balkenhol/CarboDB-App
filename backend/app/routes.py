@@ -246,8 +246,12 @@ def validate_fasta():
     if current_id:
         sequences.append({'id': current_id, 'length': len(''.join(current_seq))})
     
+    import uuid
+    file_id = str(uuid.uuid4()) if len(sequences) > 0 else None
     return jsonify({
+        'is_valid': len(sequences) > 0,
         'valid': len(sequences) > 0,
+        'file_id': file_id,
         'sequence_count': len(sequences),
         'sequences': sequences
     })
