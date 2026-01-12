@@ -213,3 +213,41 @@ def internal_error(error):
         'success': False,
         'error': 'Internal server error'
     }), 500
+from flask import Blueprint, request, jsonify
+from .batch_prediction import predict_batch_sequences
+
+analysis_bp = Blueprint('analysis', __name__)
+
+@analysis_bp.route('/predict-comprehensive', methods=['POST'])
+@analysis_bp.route('/analyze-sequence', methods=['POST'])
+def analyze_comprehensive():
+    """Alias for predict-batch - comprehensive analysis"""
+    return predict_batch_sequences()
+
+@analysis_bp.route('/validate-fasta', methods=['POST'])
+def validate_fasta():
+    """Validate FASTA input"""
+    data = request.get_json()
+    fasta = data.get('fasta', '')
+    
+    sequences = []
+    current_id = None
+    current_seq = []
+    
+    for line in fasta.strip().split('\n'):
+        if line.startswith('>'):
+            if current_id:
+                sequences.append({'id': current_id, 'length': len(''.join(current_seq))})
+            current_id = line[1:].split()[0]
+            current_seq = []
+        else:
+            current_seq.append(line.strip())
+    
+    if current_id:
+        sequences.append({'id': current_id, 'length': len(''.join(current_seq))})
+    
+    return jsonify({
+        'valid': len(sequences) > 0,
+        'sequence_count': len(sequences),
+        'sequences': sequences
+    })
