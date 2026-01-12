@@ -56,7 +56,19 @@ class SequenceRecord:
     features: Optional[Dict] = None
 
     def to_dict(self) -> Dict:
-        return {k: v for k, v in asdict(self).items() if v is not None}
+        result = {k: v for k, v in asdict(self).items() if v is not None}
+        # Add frontend-expected aliases
+        if 'is_co2_enzyme' in result:
+            result['is_consensus_positive'] = result['is_co2_enzyme']
+        if 'co2_prob_v3' in result:
+            result['v3_prob'] = result['co2_prob_v3']
+        if 'co2_prob_v5' in result:
+            result['v5_prob'] = result['co2_prob_v5']
+        if 'km_experimental' in result:
+            result['km_best'] = result['km_experimental']
+        if 'ec_verified' in result:
+            result['ec_best'] = result['ec_verified']
+        return result
 
 
 class CarboxyPredDB:
