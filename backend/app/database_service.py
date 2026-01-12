@@ -70,7 +70,7 @@ class CarboxyPredDB:
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT * FROM v_best_annotations WHERE id = ?
+                SELECT * FROM v_carboxylase_overview WHERE id = ?
             """, (seq_id,))
             row = cursor.fetchone()
             if row:
@@ -82,7 +82,7 @@ class CarboxyPredDB:
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT * FROM v_best_annotations WHERE uniprot_id = ?
+                SELECT * FROM v_carboxylase_overview WHERE uniprot_id = ?
             """, (uniprot_id,))
             row = cursor.fetchone()
             if row:
@@ -116,7 +116,7 @@ class CarboxyPredDB:
                 params.extend([ec_class, ec_class])
             
             if is_co2_enzyme is not None:
-                conditions.append("consensus_prediction = ?")
+                conditions.append("is_co2_enzyme = ?")
                 params.append(1 if is_co2_enzyme else 0)
             
             if min_length:
@@ -132,7 +132,7 @@ class CarboxyPredDB:
                 params.append(f'%{organism}%')
             
             if has_km:
-                conditions.append("(km_best IS NOT NULL OR km_predicted IS NOT NULL)")
+                conditions.append("(km_experimental IS NOT NULL OR km_predicted_uM IS NOT NULL)")
             
             if verified_only:
                 conditions.append("ec_verified IS NOT NULL")
@@ -140,9 +140,9 @@ class CarboxyPredDB:
             where_clause = " AND ".join(conditions) if conditions else "1=1"
             
             sql = f"""
-                SELECT * FROM v_best_annotations
+                SELECT * FROM v_carboxylase_overview
                 WHERE {where_clause}
-                ORDER BY v3_prob DESC NULLS LAST
+                ORDER BY co2_prob_v3 DESC NULLS LAST
                 LIMIT ? OFFSET ?
             """
             params.extend([limit, offset])
@@ -187,7 +187,7 @@ class CarboxyPredDB:
             stats['total_sequences'] = cursor.fetchone()[0]
             
             # CO2 enzymes (consensus positive)
-            cursor.execute("SELECT COUNT(*) FROM ml_predictions WHERE consensus_prediction = 1")
+            cursor.execute("SELECT COUNT(*) FROM ml_predictions WHERE is_co2_enzyme = 1")
             stats['co2_enzymes'] = cursor.fetchone()[0]
             
             # With verified EC
