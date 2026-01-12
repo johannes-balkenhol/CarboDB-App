@@ -124,7 +124,7 @@ class CarboxyPredDB:
                 params.extend([f'%{query}%', f'%{query}%'])
             
             if ec_class:
-                conditions.append("(ec_best = ? OR ec_predicted = ?)")
+                conditions.append("(ec_verified = ? OR ec_predicted = ?)")
                 params.extend([ec_class, ec_class])
             
             if is_co2_enzyme is not None:
@@ -144,7 +144,7 @@ class CarboxyPredDB:
                 params.append(f'%{organism}%')
             
             if has_km:
-                conditions.append("(km_experimental IS NOT NULL OR km_predicted_uM IS NOT NULL)")
+                conditions.append("km_experimental IS NOT NULL")
             
             if verified_only:
                 conditions.append("ec_verified IS NOT NULL")
