@@ -253,8 +253,8 @@ class CarboxyPredPredictor:
         
         # EC prediction
         ec_pred, ec_conf = self.predict_ec(features)
-        result['ec_pred'] = ec_pred
-        result['ec_conf'] = ec_conf
+        result['ec_predicted'] = ec_pred
+        result['ec_confidence'] = ec_conf
         
         # V5 prediction (if applicable)
         v5_prob, v5_pred, v5_applicable = self.predict_v5(features, ec_pred)
@@ -273,10 +273,10 @@ class CarboxyPredPredictor:
         # Km prediction (only if predicted as carboxylase)
         if result['consensus'] and ec_pred:
             km_uM, km_log = self.predict_km(features, ec_pred)
-            result['km_uM'] = km_uM
+            result['km_predicted_uM'] = km_uM
             result['km_log'] = km_log
         else:
-            result['km_uM'] = None
+            result['km_predicted_uM'] = None
             result['km_log'] = None
         
         # Include features for storage

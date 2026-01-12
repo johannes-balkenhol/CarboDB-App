@@ -98,11 +98,11 @@ def run_batch_prediction(fasta_text: str, include_features: bool = False) -> Dic
                     'v5_applicable': bool,
                     'consensus': bool,
                     'high_confidence': bool,
-                    'ec_pred': str,
-                    'ec_conf': float,
-                    'km_uM': float or None,
+                    'ec_predicted': str,
+                    'ec_confidence': float,
+                    'km_predicted_uM': float or None,
                     'km_log': float or None,
-                    'db_match': {dict} or None,
+                    'nearest_neighbor': {dict} or None,
                     'similar_with_km': [{dict}] or [],
                     'features': {dict} if include_features else None
                 }
@@ -168,16 +168,16 @@ def run_batch_prediction(fasta_text: str, include_features: bool = False) -> Dic
                 'v5_applicable': pred.get('v5_applicable', False),
                 'consensus': pred.get('consensus', False),
                 'high_confidence': pred.get('high_confidence', False),
-                'ec_pred': pred.get('ec_pred'),
-                'ec_conf': pred.get('ec_conf'),
-                'km_uM': pred.get('km_uM'),
+                'ec_predicted': pred.get('ec_predicted'),
+                'ec_confidence': pred.get('ec_confidence'),
+                'km_predicted_uM': pred.get('km_predicted_uM'),
                 'km_log': pred.get('km_log'),
             }
             
             # Database lookup
             db_match = find_database_match(seq_id)
             if db_match:
-                result['db_match'] = {
+                result['nearest_neighbor'] = {
                     'uniprot_id': db_match.get('uniprot_id'),
                     'ec_verified': db_match.get('ec_verified'),
                     'km_experimental': db_match.get('km_experimental'),
@@ -186,11 +186,11 @@ def run_batch_prediction(fasta_text: str, include_features: bool = False) -> Dic
                 }
                 summary['with_db_match'] += 1
             else:
-                result['db_match'] = None
+                result['nearest_neighbor'] = None
             
             # Find similar sequences with experimental Km
-            if pred.get('ec_pred'):
-                similar = find_similar_by_ec(pred['ec_pred'], limit=3)
+            if pred.get('ec_predicted'):
+                similar = find_similar_by_ec(pred['ec_predicted'], limit=3)
                 result['similar_with_km'] = [
                     {
                         'uniprot_id': s.get('uniprot_id'),
@@ -213,8 +213,8 @@ def run_batch_prediction(fasta_text: str, include_features: bool = False) -> Dic
                 summary['co2_positive'] += 1
             if pred.get('high_confidence'):
                 summary['high_confidence'] += 1
-            if pred.get('ec_pred'):
-                ec = pred['ec_pred']
+            if pred.get('ec_predicted'):
+                ec = pred['ec_predicted']
                 summary['ec_distribution'][ec] = summary['ec_distribution'].get(ec, 0) + 1
             
             results.append(result)
@@ -249,16 +249,16 @@ def format_results_table(results: List[Dict]) -> str:
             lines.append(f"{r['id']}\tERROR: {r['error']}")
             continue
         
-        db = r.get('db_match', {}) or {}
+        db = r.get('nearest_neighbor', {}) or {}
         row = [
             r.get('id', ''),
             str(r.get('length', '')),
             f"{r.get('v3_prob', 0):.4f}" if r.get('v3_prob') is not None else '',
             f"{r.get('v5_prob', 0):.4f}" if r.get('v5_prob') is not None else '',
             'Yes' if r.get('consensus') else 'No',
-            r.get('ec_pred', ''),
-            f"{r.get('ec_conf', 0):.4f}" if r.get('ec_conf') is not None else '',
-            f"{r.get('km_uM', 0):.2f}" if r.get('km_uM') is not None else '',
+            r.get('ec_predicted', ''),
+            f"{r.get('ec_confidence', 0):.4f}" if r.get('ec_confidence') is not None else '',
+            f"{r.get('km_predicted_uM', 0):.2f}" if r.get('km_predicted_uM') is not None else '',
             f"{r.get('km_log', 0):.4f}" if r.get('km_log') is not None else '',
             'Yes' if db else 'No',
             db.get('ec_verified', ''),
