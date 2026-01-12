@@ -8,7 +8,7 @@ import os
 
 from .ml_prediction import get_predictor
 from .batch_prediction import run_batch_prediction
-from .biopython_features import QuickSequenceAnalyzer, format_results_table
+from .biopython_features import QuickSequenceAnalyzer
 
 main = Blueprint('main', __name__)
 
@@ -231,14 +231,9 @@ def analyze_comprehensive():
         return jsonify({'success': False, 'error': 'No sequence provided'})
     
     try:
-        # BioPython analysis
+        # BioPython analysis - use complete_analysis for all features
         analyzer = QuickSequenceAnalyzer(sequence)
-        bio_analysis = {
-            'basic_properties': analyzer.get_basic_properties(),
-            'amino_acid_composition': analyzer.get_amino_acid_composition(),
-            'secondary_structure': analyzer.predict_secondary_structure(),
-            'charge_distribution': analyzer.analyze_charge_distribution(),
-        }
+        bio_analysis = analyzer.complete_analysis()
         
         # ML predictions
         fasta = f">query\n{sequence}"
@@ -313,4 +308,68 @@ def validate_fasta():
         'file_id': file_id,
         'sequence_count': len(sequences),
         'sequences': sequences
+    })
+
+# === External API endpoints ===
+
+@analysis_bp.route('/alphafold/<uniprot_id>', methods=['GET'])
+def get_alphafold(uniprot_id):
+    """Fetch AlphaFold structure availability"""
+    import urllib.request
+    import json
+    
+    try:
+        # Check if structure exists
+        url = f"https://alphafold.ebi.ac.uk/api/prediction/{uniprot_id}"
+        req = urllib.request.Request(url, headers={'Accept': 'application/json'})
+        with urllib.request.urlopen(req, timeout=10) as response:
+            data = json.loads(response.read().decode())
+            if data and len(data) > 0:
+                entry = data[0]
+                return jsonify({
+                    'success': True,
+                    'has_structure': True,
+                    'uniprot_id': uniprot_id,
+                    'pdb_url': entry.get('pdbUrl', f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v4.pdb"),
+                    'cif_url': entry.get('cifUrl', f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v4.cif"),
+                    'pae_url': entry.get('paeImageUrl'),
+                    'model_url': f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v4.pdb"
+                })
+    except Exception as e:
+        pass
+    
+    return jsonify({'success': True, 'has_structure': False, 'uniprot_id': uniprot_id})
+
+@analysis_bp.route('/interpro/<uniprot_id>', methods=['GET'])
+def get_interpro(uniprot_id):
+    """Fetch InterPro annotations"""
+    import urllib.request
+    import json
+    
+    try:
+        url = f"https://www.ebi.ac.uk/interpro/api/entry/all/protein/uniprot/{uniprot_id}?format=json"
+        req = urllib.request.Request(url, headers={'Accept': 'application/json'})
+        with urllib.request.urlopen(req, timeout=15) as response:
+            data = json.loads(response.read().decode())
+            results = []
+            for entry in data.get('results', []):
+                results.append({
+                    'accession': entry.get('metadata', {}).get('accession'),
+                    'name': entry.get('metadata', {}).get('name'),
+                    'type': entry.get('metadata', {}).get('type'),
+                    'source_database': entry.get('metadata', {}).get('source_database')
+                })
+            return jsonify({'success': True, 'results': results})
+    except Exception as e:
+        return jsonify({'success': True, 'results': [], 'error': str(e)})
+
+@analysis_bp.route('/all-searches', methods=['POST'])
+def all_searches():
+    """HMMER/Pfam domain search - placeholder"""
+    # Full HMMER search would require hmmer binaries
+    # Return empty results for now
+    return jsonify({
+        'success': True,
+        'pfam_hits': [],
+        'message': 'HMMER search requires local installation'
     })

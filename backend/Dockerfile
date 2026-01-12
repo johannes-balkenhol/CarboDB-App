@@ -20,6 +20,7 @@ RUN micromamba install -y -n base -c conda-forge \
     flask-cors=4.0 \
     apscheduler=3.10 \
     gunicorn=21.2 \
+    biopython=1.83 \
     && micromamba clean --all --yes
 
 WORKDIR /srv/app
