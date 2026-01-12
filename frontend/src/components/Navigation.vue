@@ -17,13 +17,17 @@
           <span class="nav-icon">🔬</span>
           <span>Analysis</span>
         </router-link>
+        <router-link to="/database" class="nav-link">
+          <span class="nav-icon">📊</span>
+          <span>Database</span>
+        </router-link>
         <router-link to="/hmmer-search" class="nav-link">
           <span class="nav-icon">🎯</span>
           <span>HMMER</span>
         </router-link>
-        <router-link to="/combined-searches" class="nav-link">
-          <span class="nav-icon">🔍</span>
-          <span>Combined</span>
+        <router-link to="/about" class="nav-link">
+          <span class="nav-icon">ℹ️</span>
+          <span>About</span>
         </router-link>
       </nav>
     </div>
@@ -128,20 +132,16 @@
     padding: 15px;
     gap: 15px;
   }
-  
   .tagline {
     display: none;
   }
-  
   .main-nav {
     flex-wrap: wrap;
     justify-content: center;
   }
-  
   .nav-link span:not(.nav-icon) {
     display: none;
   }
-  
   .nav-link {
     padding: 10px 14px;
   }

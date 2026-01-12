@@ -5,35 +5,45 @@
 
     <!-- Input Section -->
     <div class="input-section">
-      <div class="input-tabs">
-        <button 
-          :class="{ active: inputMode === 'single' }" 
-          @click="inputMode = 'single'"
-        >Single Sequence</button>
-        <button 
-          :class="{ active: inputMode === 'batch' }" 
-          @click="inputMode = 'batch'"
-        >Batch (FASTA)</button>
+      <div class="input-header">
+        <div class="input-tabs">
+          <button 
+            :class="{ active: inputMode === 'single' }" 
+            @click="inputMode = 'single'"
+          >Single Sequence</button>
+          <button 
+            :class="{ active: inputMode === 'batch' }" 
+            @click="inputMode = 'batch'"
+          >Batch (FASTA)</button>
+        </div>
+        <div class="example-buttons">
+          <span class="example-label">Try example:</span>
+          <button @click="loadExample('rubisco')" class="example-btn">RuBisCO</button>
+          <button @click="loadExample('pepc')" class="example-btn">PEPC</button>
+          <button @click="loadExample('ca')" class="example-btn">Carbonic Anhydrase</button>
+        </div>
       </div>
 
       <div v-if="inputMode === 'single'" class="single-input">
         <textarea 
           v-model="singleSequence" 
-          placeholder="Enter protein sequence (amino acids only)..."
+          placeholder="Enter protein sequence (amino acids only)...
+
+Example: MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
           rows="6"
         ></textarea>
         <button @click="predictSingle" :disabled="loading" class="predict-btn">
-          {{ loading ? 'Analyzing...' : 'Analyze Sequence' }}
+          {{ loading ? 'Analyzing...' : '🔬 Analyze Sequence' }}
         </button>
       </div>
 
       <div v-else class="batch-input">
         <textarea 
           v-model="fastaInput" 
-          placeholder=">seq1
-MSPQTETKASVGFK...
->seq2  
-MKLAYFVGLPN..."
+          placeholder=">RuBisCO_spinach
+MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG...
+>PEPC_maize
+MASERHHSHLHQRTQDRFASAASKDLSSRLIDASITPELDQLLAEF..."
           rows="10"
         ></textarea>
         <div class="batch-actions">
@@ -42,7 +52,7 @@ MKLAYFVGLPN..."
             📁 Upload FASTA
           </label>
           <button @click="predictBatch" :disabled="loading" class="predict-btn">
-            {{ loading ? 'Analyzing...' : 'Analyze Batch' }}
+            {{ loading ? 'Analyzing...' : '🔬 Analyze Batch' }}
           </button>
         </div>
       </div>
@@ -85,11 +95,11 @@ MKLAYFVGLPN..."
                 :class="{ 'consensus-positive': result.consensus }">
               <td class="seq-id">{{ result.id }}</td>
               <td>{{ result.length }}</td>
-              <td :class="getProbClass(result.v3_prob)">
-                {{ (result.v3_prob * 100).toFixed(1) }}%
+              <td :class="getProbClass(result.co2_prob_v3)">
+                {{ (result.co2_prob_v3 * 100).toFixed(1) }}%
               </td>
-              <td :class="getProbClass(result.v5_prob)">
-                {{ (result.v5_prob * 100).toFixed(1) }}%
+              <td :class="getProbClass(result.co2_prob_v5)">
+                {{ (result.co2_prob_v5 * 100).toFixed(1) }}%
               </td>
               <td>
                 <span :class="result.consensus ? 'badge-yes' : 'badge-no'">
@@ -230,6 +240,17 @@ const batchResults = ref([])
 const summary = ref({ total: 0, consensus_positive: 0, with_neighbor: 0 })
 const selectedResult = ref(null)
 
+const exampleSequences = {
+  rubisco: 'MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPGVPPEEAGAAVAAESSTGTWTTVWTDGLTSLDRYKGRCYHIEPVAGEENQYICYVAYPLDLFEEGSVTNMFTSIVGNVFGFKALRALRLEDLRIPVAYVKTFQGPPHGIQVERDKLNKYGRPLLGCTIKPKLGLSAKNYGRAVYECLRGGLDFTKDDENVNSQPFMRWRDRFLFCAEALYKAQAETGEIKGHYLNATAGTCEEMMKRAVFARELGVPIVMHDYLTGGFTANTSLSHYCRDNGLLLHIHRAMHAVIDRQKNHGMHFRVLAKALRLSGGDHIHSGTVVGKLEGERDITLGFVDLLRDDFIEKDRSRGIYFTQDWVSLPGVLPVASGGIHVWHMPALTEIFGDDSVLQFGGGTLGHPWGNAPGAVANRVALEACVQARNEGRDLAREGNTIIREATKVPELAAACEVWKEIKFEFD',
+  pepc: 'MASERHHSHLHQRTQDRFASAASKDLSSRLIDASITPELDQLLAEFDESHDEEVRKLMAKYGDPVHIAGDLISDGGHHEALFRGCVSDLGFQNIFKYSQVIYDDQIEKLIDWQRRSGLGAKLEERLDIITEIPQSTLAVHSHLITKPEELASLMAKFRAISELFRPDVVQATGKDIFEIALGDPGELVPPSKLPMVDKMDQFVLVSPLLQQILKDQQFMQIDSGQGSPNASEWVRQRISAMIKRLENLPEDKFQDAAKNRFSKPIPFCFSGAVKPSDVKDITKQVERQIYRLVPGYTFTEEFHSKQLLEAKQGTGSDVQEVLKAFFLSYLKQKMGHYKFFSDVKAEFEQQERLVARLAQRVLKSQGPVPSRAEQLDWILRTRQLISLEQLTREQLREMSRNLERMRDELNDDKRRYDTIERLLDEVNEIQRSGIDHYLGQSLLQSEYAAHYRGAAEAVFAKTLTRLTEDIDTAMIASFQKLATLLGCEVPVTGSYRLRNDLVFTMQFLGHAGGVLDGRPYDGSELVRKWLGELGVDIDTIAPQLSIPLFHHDAYTDEDPLLLVLGSSLLRGQVLQKVGGPLHIIGDRLVLCDGKVTSGNPSRLDALFQEHYKADLPAQNVSVLQIDGKEMVFSGTDPEAVAQAYRSLFPLLACNRPLTGLTALYNALQACDNPQAHVLLKKLLAAYTEGEPNPSNAQELFADSKYGVSEETLIASVAKQALEYAKSQGITLFATQKVLKQVGLQTSDSETQVTIEKFKNALGEQISEVKLSMKLTRDMSGISADFEYLLSRVKGKPFAAVPTLNTPFYLKGAFGKNFCKEIGPVPVDVWVLAACLVRDPSIPLEAAREILQENGIDHAFKYIEKVSMSPYSPTRMADLVQVTLSKNAGIINVAMGPVPDGEVWRTEAFGHFIEQFFSDLNVQAYPLVGLSITQRLVRNVSSRLAEESGIVVVAATGQMSKLPADMAETIQAAERKLGFNVLVPTNIGGTNVTQLQETLQLFDRLGSIHSYDLQFLLRLLREGANSFTTEGDPTTEAAGSQ',
+  ca: 'MSHHWGYGKHNGPEHWHKDFPIAKGERQSPVDIDTHTAKYDPSLKPLSVSYDQATSLRILNNGHAFNVEFDDSQDKAVLKGGPLDGTYRLIQFHFHWGSLDGQGSEHTVDKKKYAAELHLVHWNTKYGDFGKAVQQPDGLAVLGIFLKVGSAKPGLQKVVDVLDSIKTKGKSADFTNFDPRGLLPESLDYWTYPGSLTTPPLLECVTWIVLKEPISVSSEQVLKFRKLNFNGEGEPEELMVDNWRPAQPLKNRQIKASFK'
+}
+
+function loadExample(key) {
+  singleSequence.value = exampleSequences[key]
+  inputMode.value = 'single'
+}
+
 async function predictSingle() {
   if (!singleSequence.value.trim()) {
     error.value = 'Please enter a sequence'
@@ -366,10 +387,18 @@ h1 { margin: 0; color: #2d3748; }
   box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
+.input-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
 .input-tabs {
   display: flex;
   gap: 10px;
-  margin-bottom: 20px;
 }
 
 .input-tabs button {
@@ -385,6 +414,31 @@ h1 { margin: 0; color: #2d3748; }
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
   border-color: transparent;
+}
+
+.example-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.example-label {
+  color: #718096;
+  font-size: 0.9rem;
+}
+
+.example-btn {
+  padding: 6px 12px;
+  background: #e2e8f0;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.example-btn:hover {
+  background: #cbd5e0;
 }
 
 textarea {

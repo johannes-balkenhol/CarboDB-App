@@ -1,8 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
-import HmmerSearchView from '@/views/HmmerSearchView.vue'
-import AllSearchesView from '@/views/AllSearchesView.vue'
 import AnalysisView from '@/views/AnalysisView.vue'
+import DatabaseView from '@/views/DatabaseView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -17,19 +16,19 @@ const router = createRouter({
       component: HomeView,
     },
     {
-      path: '/hmmer-search',
-      name: 'hmmer-search',
-      component: HmmerSearchView,
-    },
-    {
-      path: '/all-searches',
-      name: 'all-searches',
-      component: AllSearchesView,
-    },
-    {
       path: '/analysis',
       name: 'analysis',
       component: AnalysisView,
+    },
+    {
+      path: '/database',
+      name: 'database',
+      component: DatabaseView,
+    },
+    {
+      path: '/hmmer-search',
+      name: 'hmmer-search',
+      component: () => import('../views/HmmerSearchView.vue'),
     },
     {
       path: '/about',

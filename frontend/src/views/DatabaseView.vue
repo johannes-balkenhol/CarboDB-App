@@ -90,7 +90,7 @@
           </thead>
           <tbody>
             <tr v-for="seq in results" :key="seq.uniprot_id" 
-                :class="{ 'consensus-positive': seq.is_consensus_positive }">
+                :class="{ 'consensus-positive': seq.is_co2_enzyme }">
               <td class="uniprot-id">
                 <a :href="'https://www.uniprot.org/uniprotkb/' + seq.uniprot_id" target="_blank">
                   {{ seq.uniprot_id }}
@@ -98,16 +98,16 @@
               </td>
               <td>{{ seq.length }}</td>
               <td class="organism">{{ seq.organism || '-' }}</td>
-              <td :class="getProbClass(seq.v3_prob)">
-                {{ seq.v3_prob ? (seq.v3_prob * 100).toFixed(1) + '%' : '-' }}
+              <td :class="getProbClass(seq.co2_prob_v3)">
+                {{ seq.co2_prob_v3 ? (seq.co2_prob_v3 * 100).toFixed(1) + '%' : '-' }}
               </td>
-              <td :class="getProbClass(seq.v5_prob)">
-                {{ seq.v5_prob ? (seq.v5_prob * 100).toFixed(1) + '%' : '-' }}
+              <td :class="getProbClass(seq.co2_prob_v5)">
+                {{ seq.co2_prob_v5 ? (seq.co2_prob_v5 * 100).toFixed(1) + '%' : '-' }}
               </td>
-              <td class="ec-verified">{{ seq.ec_best || seq.ec_verified || '-' }}</td>
+              <td class="ec-verified">{{ seq.ec_verified || seq.ec_verified || '-' }}</td>
               <td class="ec-predicted">{{ seq.ec_predicted || '-' }}</td>
               <td class="km-value">
-                {{ seq.km_best ? seq.km_best.toFixed(1) + ' µM' : (seq.km_predicted ? seq.km_predicted.toFixed(1) + ' µM' : '-') }}
+                {{ seq.km_experimental ? seq.km_experimental.toFixed(1) + ' µM' : (seq.km_predicted ? seq.km_predicted.toFixed(1) + ' µM' : '-') }}
               </td>
               <td>
                 <button @click="viewDetails(seq.id)" class="view-btn">View</button>

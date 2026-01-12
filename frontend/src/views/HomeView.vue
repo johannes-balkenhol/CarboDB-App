@@ -1,469 +1,572 @@
 <template>
-  <main class="home-container">
+  <div class="home-view">
     <!-- Hero Section -->
-    <section class="hero">
+    <section class="hero-section">
       <div class="hero-content">
-        <h1 class="hero-title">
-          <span class="gradient-text">Carboxylase</span> Analysis Platform
-        </h1>
-        <p class="hero-subtitle">
-          Comprehensive protein analysis for CO₂-fixing enzymes and carboxylases
+        <h1>🧬 CarboxyPred</h1>
+        <p class="hero-subtitle">CO₂-Fixing Enzyme Prediction Platform</p>
+        <p class="hero-description">
+          Identify carboxylases and predict their EC class and Km values using machine learning models trained on 695,000+ sequences
         </p>
-        <div class="hero-buttons">
-          <router-link to="/analysis" class="btn btn-primary">
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <span class="stat-number">695K+</span>
+            <span class="stat-label">Sequences Analyzed</span>
+          </div>
+          <div class="hero-stat">
+            <span class="stat-number">25</span>
+            <span class="stat-label">EC Classes</span>
+          </div>
+          <div class="hero-stat">
+            <span class="stat-number">97.5%</span>
+            <span class="stat-label">Km Correlation</span>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <router-link to="/analysis" class="btn-primary">
             🔬 Start Analysis
           </router-link>
-          <a href="#about" class="btn btn-secondary">Learn More</a>
-        </div>
-      </div>
-      <div class="hero-visual">
-        <div class="molecule-animation">
-          <div class="orbit orbit-1"><div class="electron"></div></div>
-          <div class="orbit orbit-2"><div class="electron"></div></div>
-          <div class="orbit orbit-3"><div class="electron"></div></div>
-          <div class="nucleus">CO₂</div>
+          <router-link to="/database" class="btn-secondary">
+            📊 Browse Database
+          </router-link>
         </div>
       </div>
     </section>
 
-    <!-- Features Section -->
-    <section class="features" id="about">
-      <h2 class="section-title">Analysis Features</h2>
+    <!-- Features Overview -->
+    <section class="features-section">
+      <h2>🎯 What CarboxyPred Can Do</h2>
       <div class="features-grid">
         <div class="feature-card">
-          <div class="feature-icon">🧬</div>
-          <h3>Sequence Analysis</h3>
-          <p>BioPython-powered analysis including molecular weight, isoelectric point, stability indices, and amino acid composition.</p>
+          <div class="feature-icon">🧪</div>
+          <h3>Binary Classification</h3>
+          <p>Two-stage prediction (v3 + v5) to identify CO₂-fixing enzymes with high confidence consensus</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">🎯</div>
-          <h3>Domain Detection</h3>
-          <p>HMMER search against Pfam HMM profiles to identify conserved protein domains and families.</p>
+          <div class="feature-icon">🏷️</div>
+          <h3>EC Classification</h3>
+          <p>Predict enzyme class from 25 carboxylase EC numbers with confidence scores</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">🔍</div>
-          <h3>Motif Scanning</h3>
-          <p>Prosite pattern scanning for functional motifs, active sites, and post-translational modification sites.</p>
+          <div class="feature-icon">📈</div>
+          <h3>Km Prediction</h3>
+          <p>Estimate Michaelis constant (Km) values in µM using EC-conditional regression</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">📊</div>
-          <h3>Visualizations</h3>
-          <p>Interactive Plotly charts for amino acid composition, secondary structure, and hydrophobicity profiles.</p>
+          <div class="feature-icon">🔗</div>
+          <h3>Database Matching</h3>
+          <p>Find similar sequences with experimental Km values from our curated database</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">🌐</div>
-          <h3>InterPro Integration</h3>
-          <p>Automatic lookup of domain annotations from Pfam, CATH, PANTHER, SMART, and more.</p>
+          <div class="feature-icon">📋</div>
+          <h3>Batch Analysis</h3>
+          <p>Upload FASTA files for batch prediction with downloadable TSV results</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">🔮</div>
-          <h3>3D Structure</h3>
-          <p>AlphaFold structure prediction viewer for visualizing protein architecture.</p>
+          <div class="feature-icon">🗄️</div>
+          <h3>Database Browser</h3>
+          <p>Search and explore 690K+ predicted carboxylases with filters and evidence</p>
         </div>
       </div>
     </section>
 
-    <!-- Carboxylase Families Section -->
-    <section class="families">
-      <h2 class="section-title">Carboxylase Enzyme Families</h2>
-      <div class="families-grid">
-        <div class="family-card rubisco">
-          <h3>RuBisCO</h3>
-          <p class="family-full">Ribulose-1,5-bisphosphate carboxylase/oxygenase</p>
-          <p class="family-desc">The most abundant enzyme on Earth, responsible for carbon fixation in the Calvin cycle.</p>
-          <div class="family-stats">
-            <span>🌱 Plants, Cyanobacteria</span>
-            <span>📏 ~550 kDa (Form I)</span>
+    <!-- Example Sequences -->
+    <section class="examples-section">
+      <h2>🧬 Try Example Sequences</h2>
+      <p class="section-subtitle">Click to copy and paste into the Analysis page</p>
+      <div class="examples-grid">
+        <div class="example-card" @click="copyExample('rubisco')">
+          <div class="example-header">
+            <span class="example-icon">🌿</span>
+            <h3>RuBisCO (4.1.1.39)</h3>
           </div>
+          <p class="example-description">Ribulose-1,5-bisphosphate carboxylase - Key enzyme in Calvin cycle</p>
+          <div class="example-info">
+            <span>475 aa</span>
+            <span>Spinach</span>
+          </div>
+          <pre class="example-sequence">MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPGVPPEEAGAAVAAESSTGTWTTVWTDGLTSLDRYKGRCYHIEPVAGEENQYICYVAYPLDLFEEGSVTNMFTSIVGNVFGFKALRALRLEDLRIPVAYVKTFQGPPHGIQVERDKLNKYGRPLLGCTIKPKLGLSAKNYGRAVYECLRGGLDFTKDDENVNSQPFMRWRDRFLFCAEALYKAQAETGEIKGHYLNATAGTCEEMMKRAVFARELGVPIVMHDYLTGGFTANTSLSHYCRDNGLLLHIHRAMHAVIDRQKNHGMHFRVLAKALRLSGGDHIHSGTVVGKLEGERDITLGFVDLLRDDFIEKDRSRGIYFTQDWVSLPGVLPVASGGIHVWHMPALTEIFGDDSVLQFGGGTLGHPWGNAPGAVANRVALEACVQARNEGRDLAREGNTIIREATKVPELAAACEVWKEIKFEFD</pre>
+          <span class="copy-hint">📋 Click to copy</span>
         </div>
-        <div class="family-card pepc">
-          <h3>PEPC</h3>
-          <p class="family-full">Phosphoenolpyruvate carboxylase</p>
-          <p class="family-desc">Key enzyme in C4 and CAM photosynthesis, fixes CO₂ to phosphoenolpyruvate.</p>
-          <div class="family-stats">
-            <span>🌾 C4 Plants</span>
-            <span>📏 ~400 kDa</span>
+        
+        <div class="example-card" @click="copyExample('pepc')">
+          <div class="example-header">
+            <span class="example-icon">🌾</span>
+            <h3>PEPC (4.1.1.31)</h3>
           </div>
+          <p class="example-description">Phosphoenolpyruvate carboxylase - C4 photosynthesis enzyme</p>
+          <div class="example-info">
+            <span>966 aa</span>
+            <span>Maize</span>
+          </div>
+          <pre class="example-sequence">MASERHHSHLHQRTQDRFASAASKDLSSRLIDASITPELDQLLAEFDESHDEEVRKLMAKYGDPVHIAGDLISDGGHHEALFRGCVSDLGFQNIFKYSQVIYDDQIEKLIDWQRRSGLGAKLEERLDIITEIPQSTLAVHSHLITKPEELASLMAKFRAISELFRPDVVQATGKDIFEIALGDPGELVPPSKLPMVDKMDQFVLVSPLLQQILKDQQFMQIDSGQGSPNASEWVRQRISAMIKRLENLPEDKFQDAAKNRFSKPIPFCFSGAVKPSDVKDITKQVERQIYRLVPGYTFTEEFHSKQLLEAKQGTGSDVQEVLKAFFLSYLKQKMGHYKFFSDVKAEFEQQERLVARLAQRVLKSQGPVPSRAEQLDWILRTRQLISLEQLTREQLREMSRNLERMRDELNDDKRRYDTIERLLDEVNEIQRSGIDHYLGQSLLQSEYAAHYRGAAEAVFAKTLTRLTEDIDTAMIASFQKLATLLGCEVPVTGSYRLRNDLVFTMQFLGHAGGVLDGRPYDGSELVRKWLGELGVDIDTIAPQLSIPLFHHDAYTDEDPLLLVLGSSLLRGQVLQKVGGPLHIIGDRLVLCDGKVTSGNPSRLDALFQEHYKADLPAQNVSVLQIDGKEMVFSGTDPEAVAQAYRSLFPLLACNRPLTGLTALYNALQACDNPQAHVLLKKLLAAYTEGEPNPSNAQELFADSKYGVSEETLIASVAKQALEYAKSQGITLFATQKVLKQVGLQTSDSETQVTIEKFKNALGEQISEVKLSMKLTRDMSGISADFEYLLSRVKGKPFAAVPTLNTPFYLKGAFGKNFCKEIGPVPVDVWVLAACLVRDPSIPLEAAREILQENGIDHAFKYIEKVSMSPYSPTRMADLVQVTLSKNAGIINVAMGPVPDGEVWRTEAFGHFIEQFFSDLNVQAYPLVGLSITQRLVRNVSSRLAEESGIVVVAATGQMSKLPADMAETIQAAERKLGFNVLVPTNIGGTNVTQLQETLQLFDRLGSIHSYDLQFLLRLLREGANSFTTEGDPTTEAAGSQ</pre>
+          <span class="copy-hint">📋 Click to copy</span>
         </div>
-        <div class="family-card acc">
-          <h3>ACC</h3>
-          <p class="family-full">Acetyl-CoA carboxylase</p>
-          <p class="family-desc">Catalyzes the first committed step of fatty acid synthesis.</p>
-          <div class="family-stats">
-            <span>🦠 All organisms</span>
-            <span>📏 ~250 kDa</span>
+
+        <div class="example-card" @click="copyExample('ca')">
+          <div class="example-header">
+            <span class="example-icon">💧</span>
+            <h3>Carbonic Anhydrase (4.2.1.1)</h3>
           </div>
+          <p class="example-description">CO₂ hydration enzyme - Important in CO₂ transport</p>
+          <div class="example-info">
+            <span>260 aa</span>
+            <span>Human</span>
+          </div>
+          <pre class="example-sequence">MSHHWGYGKHNGPEHWHKDFPIAKGERQSPVDIDTHTAKYDPSLKPLSVSYDQATSLRILNNGHAFNVEFDDSQDKAVLKGGPLDGTYRLIQFHFHWGSLDGQGSEHTVDKKKYAAELHLVHWNTKYGDFGKAVQQPDGLAVLGIFLKVGSAKPGLQKVVDVLDSIKTKGKSADFTNFDPRGLLPESLDYWTYPGSLTTPPLLECVTWIVLKEPISVSSEQVLKFRKLNFNGEGEPEELMVDNWRPAQPLKNRQIKASFK</pre>
+          <span class="copy-hint">📋 Click to copy</span>
         </div>
-        <div class="family-card pcc">
-          <h3>PCC</h3>
-          <p class="family-full">Propionyl-CoA carboxylase</p>
-          <p class="family-desc">Involved in odd-chain fatty acid and branched-chain amino acid metabolism.</p>
-          <div class="family-stats">
-            <span>🧫 Mitochondria</span>
-            <span>📏 ~750 kDa</span>
+
+        <div class="example-card" @click="copyExample('accA')">
+          <div class="example-header">
+            <span class="example-icon">🧫</span>
+            <h3>Acetyl-CoA Carboxylase (6.4.1.2)</h3>
           </div>
-        </div>
-        <div class="family-card vkgc">
-          <h3>VKGC</h3>
-          <p class="family-full">Vitamin K-dependent γ-carboxylase</p>
-          <p class="family-desc">Post-translational modification enzyme for blood clotting factors.</p>
-          <div class="family-stats">
-            <span>🩸 ER membrane</span>
-            <span>📏 ~94 kDa</span>
+          <p class="example-description">Biotin-dependent carboxylase - Fatty acid biosynthesis</p>
+          <div class="example-info">
+            <span>319 aa</span>
+            <span>E. coli</span>
           </div>
-        </div>
-        <div class="family-card pc">
-          <h3>PC</h3>
-          <p class="family-full">Pyruvate carboxylase</p>
-          <p class="family-desc">Anaplerotic enzyme replenishing TCA cycle intermediates.</p>
-          <div class="family-stats">
-            <span>🔋 Mitochondria</span>
-            <span>📏 ~500 kDa</span>
-          </div>
+          <pre class="example-sequence">MLNVLQRHEAVTFDDPFVFMEGGACAGQRLPKGLADINKSRPAEAALKLDTTLNKELRDIIVNLGIAERIEVKVIGPYPDRPEDPNLDKIARELGIQVADGVKTVTNGSGIMSVPIGATSQSVVKSMAEDKAGVMVIGPVPGKIGQVIRDVLAGRQGADMVFAGYQVQGGAGRVLKEDIDVAMEKFGYDWITGEFPRDQILQALNGQAIPLMVVEETKVHFSDTLAEPKLIIGPIGKLVEKSAEVGEKYKVEVEDGVLVTGMVSGTMGQEMTVNNHQFFITGEKGKAVGQTVRKTFHEDIHAALQHAATQIGEIAVIAMCPEEMSVSTYQAILDMIVQNV</pre>
+          <span class="copy-hint">📋 Click to copy</span>
         </div>
       </div>
     </section>
 
-    <!-- Quick Start Section -->
-    <section class="quickstart">
-      <h2 class="section-title">Quick Start</h2>
-      <div class="steps">
-        <div class="step">
+    <!-- How It Works -->
+    <section class="workflow-section">
+      <h2>🔄 How It Works</h2>
+      <div class="workflow-steps">
+        <div class="workflow-step">
           <div class="step-number">1</div>
-          <h4>Input Sequence</h4>
-          <p>Paste your protein sequence in FASTA format or upload a file</p>
+          <h3>Input Sequence</h3>
+          <p>Paste your protein sequence or upload a FASTA file</p>
         </div>
-        <div class="step-arrow">→</div>
-        <div class="step">
+        <div class="workflow-arrow">→</div>
+        <div class="workflow-step">
           <div class="step-number">2</div>
-          <h4>Run Analysis</h4>
-          <p>Click "Run Full Analysis" to process with all tools</p>
+          <h3>Feature Extraction</h3>
+          <p>447 features computed: composition, dipeptides, motifs, catalytic residues</p>
         </div>
-        <div class="step-arrow">→</div>
-        <div class="step">
+        <div class="workflow-arrow">→</div>
+        <div class="workflow-step">
           <div class="step-number">3</div>
-          <h4>Explore Results</h4>
-          <p>Browse interactive results across multiple tabs</p>
+          <h3>ML Prediction</h3>
+          <p>Random Forest models predict binary class, EC, and Km</p>
+        </div>
+        <div class="workflow-arrow">→</div>
+        <div class="workflow-step">
+          <div class="step-number">4</div>
+          <h3>Results & Match</h3>
+          <p>Get predictions with similar sequences from database</p>
         </div>
       </div>
-      <router-link to="/analysis" class="btn btn-primary btn-large">
-        🚀 Get Started Now
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+      <h2>Ready to Analyze?</h2>
+      <p>Upload your sequences and get predictions in seconds</p>
+      <router-link to="/analysis" class="btn-large">
+        🚀 Start Prediction
       </router-link>
     </section>
-  </main>
+
+    <!-- Copied notification -->
+    <div v-if="showCopied" class="copied-notification">
+      ✓ Sequence copied to clipboard!
+    </div>
+  </div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
+
+const showCopied = ref(false)
+
+const exampleSequences = {
+  rubisco: 'MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPGVPPEEAGAAVAAESSTGTWTTVWTDGLTSLDRYKGRCYHIEPVAGEENQYICYVAYPLDLFEEGSVTNMFTSIVGNVFGFKALRALRLEDLRIPVAYVKTFQGPPHGIQVERDKLNKYGRPLLGCTIKPKLGLSAKNYGRAVYECLRGGLDFTKDDENVNSQPFMRWRDRFLFCAEALYKAQAETGEIKGHYLNATAGTCEEMMKRAVFARELGVPIVMHDYLTGGFTANTSLSHYCRDNGLLLHIHRAMHAVIDRQKNHGMHFRVLAKALRLSGGDHIHSGTVVGKLEGERDITLGFVDLLRDDFIEKDRSRGIYFTQDWVSLPGVLPVASGGIHVWHMPALTEIFGDDSVLQFGGGTLGHPWGNAPGAVANRVALEACVQARNEGRDLAREGNTIIREATKVPELAAACEVWKEIKFEFD',
+  pepc: 'MASERHHSHLHQRTQDRFASAASKDLSSRLIDASITPELDQLLAEFDESHDEEVRKLMAKYGDPVHIAGDLISDGGHHEALFRGCVSDLGFQNIFKYSQVIYDDQIEKLIDWQRRSGLGAKLEERLDIITEIPQSTLAVHSHLITKPEELASLMAKFRAISELFRPDVVQATGKDIFEIALGDPGELVPPSKLPMVDKMDQFVLVSPLLQQILKDQQFMQIDSGQGSPNASEWVRQRISAMIKRLENLPEDKFQDAAKNRFSKPIPFCFSGAVKPSDVKDITKQVERQIYRLVPGYTFTEEFHSKQLLEAKQGTGSDVQEVLKAFFLSYLKQKMGHYKFFSDVKAEFEQQERLVARLAQRVLKSQGPVPSRAEQLDWILRTRQLISLEQLTREQLREMSRNLERMRDELNDDKRRYDTIERLLDEVNEIQRSGIDHYLGQSLLQSEYAAHYRGAAEAVFAKTLTRLTEDIDTAMIASFQKLATLLGCEVPVTGSYRLRNDLVFTMQFLGHAGGVLDGRPYDGSELVRKWLGELGVDIDTIAPQLSIPLFHHDAYTDEDPLLLVLGSSLLRGQVLQKVGGPLHIIGDRLVLCDGKVTSGNPSRLDALFQEHYKADLPAQNVSVLQIDGKEMVFSGTDPEAVAQAYRSLFPLLACNRPLTGLTALYNALQACDNPQAHVLLKKLLAAYTEGEPNPSNAQELFADSKYGVSEETLIASVAKQALEYAKSQGITLFATQKVLKQVGLQTSDSETQVTIEKFKNALGEQISEVKLSMKLTRDMSGISADFEYLLSRVKGKPFAAVPTLNTPFYLKGAFGKNFCKEIGPVPVDVWVLAACLVRDPSIPLEAAREILQENGIDHAFKYIEKVSMSPYSPTRMADLVQVTLSKNAGIINVAMGPVPDGEVWRTEAFGHFIEQFFSDLNVQAYPLVGLSITQRLVRNVSSRLAEESGIVVVAATGQMSKLPADMAETIQAAERKLGFNVLVPTNIGGTNVTQLQETLQLFDRLGSIHSYDLQFLLRLLREGANSFTTEGDPTTEAAGSQ',
+  ca: 'MSHHWGYGKHNGPEHWHKDFPIAKGERQSPVDIDTHTAKYDPSLKPLSVSYDQATSLRILNNGHAFNVEFDDSQDKAVLKGGPLDGTYRLIQFHFHWGSLDGQGSEHTVDKKKYAAELHLVHWNTKYGDFGKAVQQPDGLAVLGIFLKVGSAKPGLQKVVDVLDSIKTKGKSADFTNFDPRGLLPESLDYWTYPGSLTTPPLLECVTWIVLKEPISVSSEQVLKFRKLNFNGEGEPEELMVDNWRPAQPLKNRQIKASFK',
+  accA: 'MLNVLQRHEAVTFDDPFVFMEGGACAGQRLPKGLADINKSRPAEAALKLDTTLNKELRDIIVNLGIAERIEVKVIGPYPDRPEDPNLDKIARELGIQVADGVKTVTNGSGIMSVPIGATSQSVVKSMAEDKAGVMVIGPVPGKIGQVIRDVLAGRQGADMVFAGYQVQGGAGRVLKEDIDVAMEKFGYDWITGEFPRDQILQALNGQAIPLMVVEETKVHFSDTLAEPKLIIGPIGKLVEKSAEVGEKYKVEVEDGVLVTGMVSGTMGQEMTVNNHQFFITGEKGKAVGQTVRKTFHEDIHAALQHAATQIGEIAVIAMCPEEMSVSTYQAILDMIVQNV'
+}
+
+async function copyExample(key) {
+  const seq = exampleSequences[key]
+  try {
+    await navigator.clipboard.writeText(seq)
+    showCopied.value = true
+    setTimeout(() => showCopied.value = false, 2000)
+  } catch (err) {
+    console.error('Copy failed:', err)
+  }
+}
 </script>
 
 <style scoped>
-.home-container {
-  max-width: 1400px;
+.home-view {
+  min-height: 100vh;
+}
+
+/* Hero */
+.hero-section {
+  background: linear-gradient(135deg, #1a365d 0%, #2c5282 50%, #38a169 100%);
+  color: white;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.hero-content {
+  max-width: 900px;
   margin: 0 auto;
-  padding: 0 20px;
 }
 
-/* Hero Section */
-.hero {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 40px;
-  padding: 60px 0;
-  align-items: center;
-  min-height: 70vh;
-}
-
-.hero-title {
+.hero-section h1 {
   font-size: 3.5rem;
-  font-weight: 800;
-  line-height: 1.1;
-  margin-bottom: 20px;
-  color: #1a365d;
-}
-
-.gradient-text {
-  background: linear-gradient(135deg, #2b6cb0, #38b2ac, #48bb78);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  margin: 0 0 15px 0;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
 }
 
 .hero-subtitle {
-  font-size: 1.3rem;
-  color: #4a5568;
-  margin-bottom: 30px;
+  font-size: 1.5rem;
+  opacity: 0.95;
+  margin-bottom: 20px;
+}
+
+.hero-description {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  max-width: 700px;
+  margin: 0 auto 40px;
   line-height: 1.6;
 }
 
-.hero-buttons {
-  display: flex;
-  gap: 15px;
-}
-
-.btn {
-  padding: 14px 28px;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 16px;
-  text-decoration: none;
-  transition: all 0.3s ease;
-  display: inline-block;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #2b6cb0, #3182ce);
-  color: white;
-  box-shadow: 0 4px 15px rgba(43, 108, 176, 0.4);
-}
-
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(43, 108, 176, 0.5);
-}
-
-.btn-secondary {
-  background: white;
-  color: #2b6cb0;
-  border: 2px solid #2b6cb0;
-}
-
-.btn-secondary:hover {
-  background: #ebf8ff;
-}
-
-.btn-large {
-  padding: 18px 40px;
-  font-size: 18px;
-}
-
-/* Molecule Animation */
-.hero-visual {
+.hero-stats {
   display: flex;
   justify-content: center;
-  align-items: center;
-}
-
-.molecule-animation {
-  position: relative;
-  width: 300px;
-  height: 300px;
-}
-
-.nucleus {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(135deg, #48bb78, #38b2ac);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  color: white;
-  font-size: 20px;
-  box-shadow: 0 0 30px rgba(72, 187, 120, 0.5);
-}
-
-.orbit {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  border: 2px dashed #cbd5e0;
-  border-radius: 50%;
-  animation: rotate 10s linear infinite;
-}
-
-.orbit-1 { width: 150px; height: 150px; margin: -75px 0 0 -75px; }
-.orbit-2 { width: 220px; height: 220px; margin: -110px 0 0 -110px; animation-duration: 15s; animation-direction: reverse; }
-.orbit-3 { width: 280px; height: 280px; margin: -140px 0 0 -140px; animation-duration: 20s; }
-
-.electron {
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  background: linear-gradient(135deg, #4299e1, #3182ce);
-  border-radius: 50%;
-  top: -8px;
-  left: 50%;
-  margin-left: -8px;
-  box-shadow: 0 0 10px rgba(66, 153, 225, 0.6);
-}
-
-@keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* Features Section */
-.section-title {
-  text-align: center;
-  font-size: 2.2rem;
-  color: #1a365d;
+  gap: 60px;
   margin-bottom: 40px;
 }
 
-.features {
-  padding: 60px 0;
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+.btn-primary, .btn-secondary {
+  padding: 15px 35px;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #48bb78, #38a169);
+  color: white;
+  box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
+}
+
+.btn-secondary {
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border: 2px solid rgba(255,255,255,0.3);
+}
+
+.btn-primary:hover, .btn-secondary:hover {
+  transform: translateY(-3px);
+}
+
+/* Features */
+.features-section {
+  padding: 60px 20px;
+  background: #f7fafc;
+}
+
+.features-section h2 {
+  text-align: center;
+  font-size: 2rem;
+  color: #2d3748;
+  margin-bottom: 40px;
 }
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 25px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .feature-card {
   background: white;
-  padding: 30px;
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  transition: all 0.3s ease;
+  padding: 30px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .feature-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1);
 }
 
 .feature-icon {
-  font-size: 40px;
+  font-size: 2.5rem;
   margin-bottom: 15px;
 }
 
 .feature-card h3 {
-  color: #1a365d;
-  margin-bottom: 10px;
+  margin: 0 0 10px 0;
+  color: #2d3748;
   font-size: 1.2rem;
 }
 
 .feature-card p {
   color: #718096;
-  line-height: 1.6;
-  font-size: 14px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
 }
 
-/* Families Section */
-.families {
-  padding: 60px 0;
-  background: linear-gradient(180deg, transparent, #f7fafc);
-  margin: 0 -20px;
-  padding-left: 20px;
-  padding-right: 20px;
-}
-
-.families-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-}
-
-.family-card {
+/* Examples */
+.examples-section {
+  padding: 60px 20px;
   background: white;
-  padding: 25px;
-  border-radius: 12px;
-  border-left: 4px solid #3182ce;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
 }
 
-.family-card.rubisco { border-left-color: #48bb78; }
-.family-card.pepc { border-left-color: #ed8936; }
-.family-card.acc { border-left-color: #9f7aea; }
-.family-card.pcc { border-left-color: #f56565; }
-.family-card.vkgc { border-left-color: #ed64a6; }
-.family-card.pc { border-left-color: #4299e1; }
-
-.family-card h3 {
-  font-size: 1.5rem;
-  color: #1a365d;
-  margin-bottom: 5px;
-}
-
-.family-full {
-  font-size: 12px;
-  color: #718096;
-  font-style: italic;
+.examples-section h2 {
+  text-align: center;
+  font-size: 2rem;
+  color: #2d3748;
   margin-bottom: 10px;
 }
 
-.family-desc {
-  color: #4a5568;
-  font-size: 14px;
-  line-height: 1.5;
-  margin-bottom: 15px;
+.section-subtitle {
+  text-align: center;
+  color: #718096;
+  margin-bottom: 40px;
 }
 
-.family-stats {
+.examples-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 25px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.example-card {
+  background: #f7fafc;
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+  position: relative;
+}
+
+.example-card:hover {
+  border-color: #667eea;
+  background: #edf2f7;
+}
+
+.example-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.example-icon {
+  font-size: 1.5rem;
+}
+
+.example-header h3 {
+  margin: 0;
+  color: #2d3748;
+  font-size: 1.1rem;
+}
+
+.example-description {
+  color: #718096;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+.example-info {
   display: flex;
   gap: 15px;
-  font-size: 12px;
-  color: #718096;
+  font-size: 0.8rem;
+  color: #a0aec0;
+  margin-bottom: 10px;
 }
 
-/* Quick Start */
-.quickstart {
-  padding: 60px 0;
+.example-sequence {
+  background: #1a202c;
+  color: #68d391;
+  padding: 10px;
+  border-radius: 6px;
+  font-family: 'Monaco', monospace;
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.copy-hint {
+  position: absolute;
+  bottom: 10px;
+  right: 15px;
+  font-size: 0.8rem;
+  color: #667eea;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.example-card:hover .copy-hint {
+  opacity: 1;
+}
+
+/* Workflow */
+.workflow-section {
+  padding: 60px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.workflow-section h2 {
   text-align: center;
+  font-size: 2rem;
+  margin-bottom: 40px;
 }
 
-.steps {
+.workflow-steps {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 20px;
-  margin-bottom: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+  flex-wrap: wrap;
 }
 
-.step {
-  background: white;
-  padding: 30px;
+.workflow-step {
+  background: rgba(255,255,255,0.1);
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-  width: 220px;
+  padding: 25px;
+  text-align: center;
+  min-width: 180px;
+  max-width: 220px;
 }
 
 .step-number {
-  width: 50px;
-  height: 50px;
-  background: linear-gradient(135deg, #2b6cb0, #3182ce);
-  color: white;
+  width: 40px;
+  height: 40px;
+  background: white;
+  color: #667eea;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  font-weight: bold;
+  font-weight: 700;
+  font-size: 1.2rem;
   margin: 0 auto 15px;
 }
 
-.step h4 {
-  color: #1a365d;
-  margin-bottom: 8px;
+.workflow-step h3 {
+  margin: 0 0 10px 0;
+  font-size: 1rem;
 }
 
-.step p {
+.workflow-step p {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.workflow-arrow {
+  font-size: 2rem;
+  opacity: 0.5;
+}
+
+/* CTA */
+.cta-section {
+  padding: 80px 20px;
+  text-align: center;
+  background: #f7fafc;
+}
+
+.cta-section h2 {
+  font-size: 2rem;
+  color: #2d3748;
+  margin-bottom: 10px;
+}
+
+.cta-section p {
   color: #718096;
-  font-size: 13px;
+  margin-bottom: 30px;
 }
 
-.step-arrow {
-  font-size: 30px;
-  color: #cbd5e0;
+.btn-large {
+  padding: 18px 50px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-block;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+  transition: transform 0.2s;
 }
 
-/* Responsive */
-@media (max-width: 1000px) {
-  .hero { grid-template-columns: 1fr; text-align: center; }
-  .hero-visual { display: none; }
-  .features-grid, .families-grid { grid-template-columns: repeat(2, 1fr); }
-  .steps { flex-direction: column; }
-  .step-arrow { transform: rotate(90deg); }
+.btn-large:hover {
+  transform: translateY(-3px);
 }
 
-@media (max-width: 600px) {
-  .hero-title { font-size: 2.5rem; }
-  .features-grid, .families-grid { grid-template-columns: 1fr; }
+/* Notification */
+.copied-notification {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: #48bb78;
+  color: white;
+  padding: 15px 25px;
+  border-radius: 10px;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .hero-section h1 { font-size: 2.5rem; }
+  .hero-stats { flex-direction: column; gap: 20px; }
+  .hero-actions { flex-direction: column; }
+  .workflow-arrow { display: none; }
+  .workflow-steps { flex-direction: column; }
 }
 </style>
