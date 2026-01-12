@@ -140,7 +140,7 @@ class CarboxyPredPredictor:
             return 0.0, False
         
         model = self.models['v3']
-        clf = model['model']
+        clf = model['classifier']
         scaler = model['scaler']
         feature_cols = model['feature_cols']
         
@@ -164,7 +164,7 @@ class CarboxyPredPredictor:
         if ec_pred and ec_pred not in target_ecs:
             return None, None, False
         
-        clf = model['model']
+        clf = model['classifier']
         scaler = model['scaler']
         feature_cols = model['feature_cols']
         

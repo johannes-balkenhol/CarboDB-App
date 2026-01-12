@@ -191,7 +191,7 @@ def predict_single(sequence: str, seq_id: str = "query") -> Dict:
         v3_features = v3_model['feature_cols']
         X_v3 = np.array([[features.get(c, 0) for c in v3_features]])
         X_v3_scaled = v3_model['scaler'].transform(X_v3)
-        result['v3_prob'] = float(v3_model['model'].predict_proba(X_v3_scaled)[0][1])
+        result['v3_prob'] = float(v3_model['classifier'].predict_proba(X_v3_scaled)[0][1])
     else:
         result['v3_prob'] = 0.0
     
@@ -201,7 +201,7 @@ def predict_single(sequence: str, seq_id: str = "query") -> Dict:
         v5_features = v5_model['feature_cols']
         X_v5 = np.array([[features.get(c, 0) for c in v5_features]])
         X_v5_scaled = v5_model['scaler'].transform(X_v5)
-        result['v5_prob'] = float(v5_model['model'].predict_proba(X_v5_scaled)[0][1])
+        result['v5_prob'] = float(v5_model['classifier'].predict_proba(X_v5_scaled)[0][1])
     else:
         result['v5_prob'] = 0.0
     
