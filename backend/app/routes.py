@@ -226,9 +226,14 @@ def analyze_comprehensive():
 
 @analysis_bp.route('/validate-fasta', methods=['POST'])
 def validate_fasta():
-    """Validate FASTA input"""
-    data = request.get_json()
-    fasta = data.get('fasta', '')
+    """Validate FASTA input - handles both JSON and form-data"""
+    if request.is_json:
+        data = request.get_json()
+        fasta = data.get('fasta', '')
+    elif 'file' in request.files:
+        fasta = request.files['file'].read().decode('utf-8')
+    else:
+        fasta = request.form.get('fasta', request.form.get('sequence', ''))
     
     sequences = []
     current_id = None
