@@ -1,0 +1,23 @@
+# CarboxyPred Backend Requirements
+# Note: These versions must match the HPC environment for model compatibility
+
+# Core ML
+numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.5.2
+scipy==1.14.1
+joblib==1.4.2
+
+# Web framework
+flask==3.0.0
+flask-cors==4.0.0
+gunicorn==21.2.0
+
+# Scheduling
+apscheduler==3.10.4
+
+# Database
+# SQLite is built-in
+
+# Optional: BioPython for sequence handling
+# biopython==1.83
