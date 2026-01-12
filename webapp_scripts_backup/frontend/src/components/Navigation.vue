@@ -25,6 +25,10 @@
           <span class="nav-icon">🎯</span>
           <span>HMMER</span>
         </router-link>
+        <router-link to="/about" class="nav-link">
+          <span class="nav-icon">ℹ️</span>
+          <span>About</span>
+        </router-link>
       </nav>
     </div>
   </header>

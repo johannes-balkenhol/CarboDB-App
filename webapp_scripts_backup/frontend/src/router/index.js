@@ -31,11 +31,6 @@ const router = createRouter({
       component: () => import('../views/HmmerSearchView.vue'),
     },
     {
-      path: '/combined-searches',
-      name: 'combined-searches',
-      component: () => import('../views/AllSearchesView.vue'),
-    },
-    {
       path: '/about',
       name: 'about',
       component: () => import('../views/AboutView.vue'),
