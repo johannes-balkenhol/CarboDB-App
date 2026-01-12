@@ -221,8 +221,42 @@ analysis_bp = Blueprint('analysis', __name__)
 @analysis_bp.route('/predict-comprehensive', methods=['POST'])
 @analysis_bp.route('/analyze-sequence', methods=['POST'])
 def analyze_comprehensive():
-    """Alias for predict-batch - comprehensive analysis"""
-    data = request.get_json(); return jsonify(run_batch_prediction(data.get('fasta', '')))
+    """Comprehensive analysis - handles sequence or fasta"""
+    data = request.get_json() or {}
+    
+    # Handle both 'sequence' (plain) and 'fasta' (formatted) inputs
+    fasta = data.get('fasta', '')
+    if not fasta and 'sequence' in data:
+        seq = data['sequence']
+        seq_id = data.get('id', 'query')
+        fasta = f">{seq_id}\n{seq}"
+    
+    if not fasta:
+        return jsonify({'success': False, 'error': 'No sequence provided'})
+    
+    result = run_batch_prediction(fasta)
+    
+    # Also return in 'analysis' format for frontend compatibility
+    if result.get('success') and result.get('results'):
+        result['analysis'] = result['results'][0] if len(result['results']) == 1 else result['results']
+    
+    return jsonify(result)
+
+@analysis_bp.route('/visualize-sequence', methods=['POST'])
+def visualize_sequence():
+    """Generate visualization data for sequence"""
+    data = request.get_json() or {}
+    sequence = data.get('sequence', '')
+    
+    # Return placeholder charts data
+    return jsonify({
+        'success': True,
+        'charts': {
+            'amino_acid_composition': {},
+            'hydrophobicity': [],
+            'secondary_structure': {}
+        }
+    })
 
 @analysis_bp.route('/validate-fasta', methods=['POST'])
 def validate_fasta():
