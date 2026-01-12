@@ -369,8 +369,6 @@ onMounted(() => {
         <div class="info-panel">
           <h3>Analysis Pipeline</h3>
           <div class="pipeline-steps">
-            <div class="pipeline-step completed"><span class="step-icon">🤖</span><span>ML Predictions (EC, Km)</span></div>
-            <div class="pipeline-step completed"><span class="step-icon">🔗</span><span>Database Nearest Neighbor</span></div>
             <div class="pipeline-step"><span class="step-icon">🧬</span><span>BioPython Analysis</span></div>
             <div class="pipeline-step"><span class="step-icon">🎯</span><span>HMMER/Pfam Search</span></div>
             <div class="pipeline-step"><span class="step-icon">🌐</span><span>InterPro Lookup</span></div>

@@ -7,7 +7,8 @@ from werkzeug.utils import secure_filename
 import os
 
 from .ml_prediction import get_predictor
-from .batch_prediction import run_batch_prediction, format_results_table
+from .batch_prediction import run_batch_prediction
+from .biopython_features import QuickSequenceAnalyzer, format_results_table
 
 main = Blueprint('main', __name__)
 
@@ -215,32 +216,51 @@ def internal_error(error):
     }), 500
 from flask import Blueprint, request, jsonify
 from .batch_prediction import run_batch_prediction
+from .biopython_features import QuickSequenceAnalyzer
 
 analysis_bp = Blueprint('analysis', __name__)
 
 @analysis_bp.route('/predict-comprehensive', methods=['POST'])
 @analysis_bp.route('/analyze-sequence', methods=['POST'])
 def analyze_comprehensive():
-    """Comprehensive analysis - handles sequence or fasta"""
+    """Comprehensive analysis - BioPython + ML predictions"""
     data = request.get_json() or {}
+    sequence = data.get('sequence', '')
     
-    # Handle both 'sequence' (plain) and 'fasta' (formatted) inputs
-    fasta = data.get('fasta', '')
-    if not fasta and 'sequence' in data:
-        seq = data['sequence']
-        seq_id = data.get('id', 'query')
-        fasta = f">{seq_id}\n{seq}"
-    
-    if not fasta:
+    if not sequence:
         return jsonify({'success': False, 'error': 'No sequence provided'})
     
-    result = run_batch_prediction(fasta)
-    
-    # Also return in 'analysis' format for frontend compatibility
-    if result.get('success') and result.get('results'):
-        result['analysis'] = result['results'][0] if len(result['results']) == 1 else result['results']
-    
-    return jsonify(result)
+    try:
+        # BioPython analysis
+        analyzer = QuickSequenceAnalyzer(sequence)
+        bio_analysis = {
+            'basic_properties': analyzer.get_basic_properties(),
+            'amino_acid_composition': analyzer.get_amino_acid_composition(),
+            'secondary_structure': analyzer.predict_secondary_structure(),
+            'charge_distribution': analyzer.analyze_charge_distribution(),
+        }
+        
+        # ML predictions
+        fasta = f">query\n{sequence}"
+        ml_result = run_batch_prediction(fasta)
+        
+        # Combine results
+        if ml_result.get('success') and ml_result.get('results'):
+            ml_pred = ml_result['results'][0]
+            bio_analysis['ml_predictions'] = ml_pred
+            bio_analysis['ec_predicted'] = ml_pred.get('ec_predicted')
+            bio_analysis['ec_confidence'] = ml_pred.get('ec_confidence')
+            bio_analysis['km_predicted_uM'] = ml_pred.get('km_predicted_uM')
+            bio_analysis['consensus'] = ml_pred.get('consensus')
+            bio_analysis['v3_prob'] = ml_pred.get('v3_prob')
+            bio_analysis['v5_prob'] = ml_pred.get('v5_prob')
+        
+        return jsonify({
+            'success': True,
+            'analysis': bio_analysis
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @analysis_bp.route('/visualize-sequence', methods=['POST'])
 def visualize_sequence():
