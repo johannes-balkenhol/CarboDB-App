@@ -116,7 +116,7 @@ class CarboxyPredDB:
                 params.extend([ec_class, ec_class])
             
             if is_co2_enzyme is not None:
-                conditions.append("is_consensus_positive = ?")
+                conditions.append("consensus_prediction = ?")
                 params.append(1 if is_co2_enzyme else 0)
             
             if min_length:
@@ -187,15 +187,15 @@ class CarboxyPredDB:
             stats['total_sequences'] = cursor.fetchone()[0]
             
             # CO2 enzymes (consensus positive)
-            cursor.execute("SELECT COUNT(*) FROM sequences WHERE is_consensus_positive = 1")
+            cursor.execute("SELECT COUNT(*) FROM ml_predictions WHERE consensus_prediction = 1")
             stats['co2_enzymes'] = cursor.fetchone()[0]
             
             # With verified EC
-            cursor.execute("SELECT COUNT(DISTINCT sequence_id) FROM ec_evidence WHERE evidence_type IN ('experimental', 'curated')")
+            cursor.execute("SELECT COUNT(DISTINCT sequence_id) FROM ec_annotations WHERE source IN ('uniprot', 'brenda')")
             stats['with_verified_ec'] = cursor.fetchone()[0]
             
             # With experimental Km
-            cursor.execute("SELECT COUNT(DISTINCT sequence_id) FROM km_evidence WHERE evidence_type = 'experimental'")
+            cursor.execute("SELECT COUNT(DISTINCT sequence_id) FROM brenda_kinetics ")
             stats['with_experimental_km'] = cursor.fetchone()[0]
             
             # With features
@@ -205,7 +205,7 @@ class CarboxyPredDB:
             # EC distribution (top 10)
             cursor.execute("""
                 SELECT ec_number, COUNT(*) as count
-                FROM ec_evidence
+                FROM ec_annotations
                 GROUP BY ec_number
                 ORDER BY count DESC
                 LIMIT 10

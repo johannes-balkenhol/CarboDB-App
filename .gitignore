@@ -1,4 +1,7 @@
 backend/carboxylase_search/data_acquisition/out/
 backend/carboxylase_search/prosite_scan/output/
 backend/uploaded_user_data/
-**/__pycache__/
+**/__pycache__/backend/database_files/*.db
+backend/ml_models/*.pkl
+*.db
+*.pkl
