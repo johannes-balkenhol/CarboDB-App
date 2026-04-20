@@ -1,0 +1,36 @@
+nohup: ignoring input
+INFO:     Started server process [2039746]
+INFO:     Waiting for application startup.
+2026-04-20 11:24:05,963 INFO CarboDB webapp starting...
+2026-04-20 11:24:05,965 INFO Feature names loaded: 1793 features
+2026-04-20 11:24:05,965 INFO EC label map: 27 classes
+2026-04-20 11:24:06,509 INFO Binary model loaded
+2026-04-20 11:24:07,478 INFO EC model loaded
+2026-04-20 11:24:07,604 INFO Km model loaded
+2026-04-20 11:24:10,223 INFO Loading ESM-2 on cpu...
+2026-04-20 11:24:17,849 INFO ESM-2 loaded successfully
+2026-04-20 11:24:17,849 INFO All models ready
+2026-04-20 11:24:17,849 INFO Models loaded in 11.9s
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8090 (Press CTRL+C to quit)
+INFO:     127.0.0.1:59452 - "POST /api/v1/predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33786 - "POST /api/v1/predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54312 - "POST /api/v1/predict HTTP/1.1" 200 OK
+INFO:     10.109.18.3:63683 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     10.109.18.3:63683 - "GET /api/v1/health HTTP/1.1" 200 OK
+INFO:     10.109.18.3:55658 - "POST /api/v1/predict HTTP/1.1" 200 OK
+INFO:     10.109.18.3:63683 - "GET /api/v1/stats HTTP/1.1" 200 OK
+INFO:     10.109.18.3:58616 - "GET / HTTP/1.1" 200 OK
+INFO:     10.109.18.3:58616 - "GET /api/v1/health HTTP/1.1" 200 OK
+INFO:     10.109.18.3:55973 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     10.109.18.3:57758 - "POST /api/v1/predict HTTP/1.1" 200 OK
+INFO:     10.109.18.3:58616 - "GET /api/v1/stats HTTP/1.1" 200 OK
+INFO:     10.109.18.3:54897 - "GET / HTTP/1.1" 200 OK
+INFO:     10.109.18.3:54897 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     10.109.18.3:54897 - "GET / HTTP/1.1" 304 Not Modified
+INFO:     10.109.18.3:64203 - "GET /docs HTTP/1.1" 200 OK
+INFO:     10.109.18.3:64203 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     10.109.18.3:60124 - "GET / HTTP/1.1" 304 Not Modified
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     10.109.18.3:64226 - "GET / HTTP/1.1" 200 OK
