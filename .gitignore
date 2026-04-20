@@ -1,4 +1,5 @@
 backend/carboxylase_search/data_acquisition/out/
 backend/carboxylase_search/prosite_scan/output/
 backend/uploaded_user_data/
-**/__pycache__/
+**/__pycache__/*.bak
+*.oldbak
