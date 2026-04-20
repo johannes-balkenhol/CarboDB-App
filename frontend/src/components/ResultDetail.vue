@@ -247,7 +247,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 
 const props = defineProps({
   result:   { type: Object, required: true },
@@ -454,8 +454,6 @@ function featureDisplay(name) {
   return name
 }
 
-// Vue's watchEffect needs explicit import when used in <script setup>
-import { watchEffect } from 'vue'
 </script>
 
 <style scoped>
