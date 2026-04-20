@@ -144,93 +144,12 @@ MASERHHSHLHQRTQDRFASAASKDLSSRLIDASITPELDQLLAEF..."
     </div>
 
     <!-- Single Result / Detail View -->
-    <div v-if="selectedResult" class="detail-view">
-      <div class="detail-header">
-        <h2>{{ selectedResult.id }}</h2>
-        <button @click="selectedResult = null" class="close-btn">×</button>
-      </div>
-
-      <div class="detail-grid">
-        <div class="detail-card">
-          <h3>🧬 Sequence Info</h3>
-          <div class="info-row"><span>Length:</span> {{ selectedResult.length }} aa</div>
-        </div>
-
-        <div class="detail-card">
-          <h3>🎯 Binary Classification</h3>
-          <div class="info-row">
-            <span>CO₂ Probability:</span> 
-            <span :class="getProbClass(selectedResult.co2_prob_v3)">
-              {{ (selectedResult.co2_prob_v3 * 100).toFixed(2) }}%
-            </span>
-          </div>
-          <div class="info-row">
-            <span>EC Confidence:</span> 
-            <span :class="getProbClass(selectedResult.ec_confidence)">
-              {{ (selectedResult.ec_confidence * 100).toFixed(2) }}%
-            </span>
-          </div>
-          <div class="info-row">
-            <span>Consensus:</span>
-            <span :class="selectedResult.consensus ? 'badge-yes' : 'badge-no'">
-              {{ selectedResult.consensus ? 'CO₂ Enzyme' : 'Not CO₂ Enzyme' }}
-            </span>
-          </div>
-        </div>
-
-        <div class="detail-card">
-          <h3>🧪 EC Classification</h3>
-          <div class="info-row">
-            <span>Predicted EC:</span> 
-            <strong>{{ selectedResult.ec_predicted }}</strong>
-          </div>
-          <div class="info-row">
-            <span>Confidence:</span> 
-            {{ (selectedResult.ec_confidence * 100).toFixed(1) }}%
-          </div>
-        </div>
-
-        <div class="detail-card">
-          <h3>📊 Km Prediction</h3>
-          <div class="info-row">
-            <span>Predicted Km:</span> 
-            <strong>{{ selectedResult.km_predicted_uM?.toFixed(2) }} µM</strong>
-          </div>
-        </div>
-
-        <div class="detail-card" v-if="selectedResult.nearest_neighbor">
-          <h3>🔗 Nearest Database Match</h3>
-          <div class="info-row">
-            <span>UniProt ID:</span>
-            <a :href="'https://www.uniprot.org/uniprotkb/' + selectedResult.nearest_neighbor.uniprot_id" 
-               target="_blank">
-              {{ selectedResult.nearest_neighbor.uniprot_id }}
-            </a>
-          </div>
-          <div class="info-row">
-            <span>EC:</span> {{ selectedResult.nearest_neighbor.ec_number }}
-          </div>
-          <div class="info-row">
-            <span>Experimental Km:</span> 
-            {{ selectedResult.nearest_neighbor.km_experimental?.toFixed(2) }} µM
-          </div>
-          <div class="info-row">
-            <span>Organism:</span> {{ selectedResult.nearest_neighbor.organism }}
-          </div>
-        </div>
-
-        <div class="detail-card" v-if="selectedResult.similar_with_km?.length > 0">
-          <h3>🧬 Similar Sequences with Experimental Km</h3>
-          <div v-for="sim in selectedResult.similar_with_km" :key="sim.uniprot_id" class="similar-item">
-            <a :href="'https://www.uniprot.org/uniprotkb/' + sim.uniprot_id" target="_blank">
-              {{ sim.uniprot_id }}
-            </a>
-            <span>{{ sim.ec_verified }}</span>
-            <span>{{ sim.km_experimental?.toFixed(1) }} µM</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <ResultDetail
+      v-if="selectedResult"
+      :result="selectedResult"
+      class="detail-view-component"
+      @close="selectedResult = null"
+    />
 
     <!-- Error Message -->
     <div v-if="error" class="error-message">
@@ -241,6 +160,7 @@ MASERHHSHLHQRTQDRFASAASKDLSSRLIDASITPELDQLLAEF..."
 
 <script setup>
 import { ref } from 'vue'
+import ResultDetail from '@/components/ResultDetail.vue'
 
 const API_URL = ''
 
@@ -290,21 +210,17 @@ async function predictSingle() {
     const data = await res.json()
 
     if (data.ec_predicted) {
-      // Normalise to old result format for display
+      // Keep all backend fields (features_computed, shap, warnings, etc.);
+      // add the aliases that the batch table still expects.
       const result = {
-        id: 'query',
+        ...data,
+        id: data.cdb_query_id || 'query',
         length: data.sequence_length,
         co2_prob_v3: data.carboxylase_probability,
         co2_prob_v5: data.carboxylase_probability,
         consensus: data.is_carboxylase,
-        ec_predicted: data.ec_predicted,
-        ec_confidence: data.ec_confidence,
-        km_predicted_uM: data.km_predicted_uM,
         nearest_neighbor: data.top_similar?.[0] || null,
         similar_with_km: data.top_similar || [],
-        pfam_hits: data.pfam_hits || [],
-        novelty_flag: data.novelty_flag,
-        runtime: data.runtime_seconds,
       }
       batchResults.value = [result]
       summary.value = { total: 1, consensus_positive: data.is_carboxylase ? 1 : 0, with_neighbor: data.top_similar?.length > 0 ? 1 : 0 }
@@ -329,12 +245,13 @@ async function predictBatch() {
   error.value = null
 
   try {
-    const res = await fetch(`${API_URL}/api/v1/predict`, {
+    const res = await fetch(`${API_URL}/api/v1/batch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         fasta: fastaInput.value.trim(),
-        include_features: false
+        mode:    selectedMode.value || 'fast',
+        kingdom: selectedKingdom.value || 'plant',
       })
     })
 
@@ -373,8 +290,8 @@ function downloadResults() {
   const rows = batchResults.value.map(r => [
     r.id,
     r.length,
-    r.v3_prob?.toFixed(4),
-    r.v5_prob?.toFixed(4),
+    r.carboxylase_probability?.toFixed(4),
+    r.carboxylase_probability?.toFixed(4),
     r.consensus ? 'Yes' : 'No',
     r.ec_predicted,
     r.ec_confidence?.toFixed(4),
@@ -395,7 +312,7 @@ function downloadResults() {
 }
 
 function getProbClass(prob) {
-  if (!prob) return ''
+  if (prob == null) return ''
   if (prob >= 0.9) return 'prob-high'
   if (prob >= 0.5) return 'prob-medium'
   return 'prob-low'
@@ -707,4 +624,6 @@ textarea:focus {
   font-size: 13px;
   background: white;
 }
+
+.detail-view-component { margin-bottom: 25px; }
 </style>
