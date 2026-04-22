@@ -168,6 +168,23 @@
 
       <!-- Top features list -->
       <div v-if="currentShapFeatures.length > 0" class="rd-shap-features">
+        <!-- Summary banner: how many of the top SHAP features are present in the query -->
+        <div v-if="matchSummary" class="rd-match-summary" :class="'rd-match-verdict-' + matchSummary.verdict">
+          <div class="rd-match-summary-main">
+            Your sequence matches
+            <strong>{{ matchSummary.hits }} / {{ matchSummary.interpretable }}</strong>
+            of the most important features
+            <span v-if="matchSummary.unknown > 0" class="rd-match-summary-unknown">
+              ({{ matchSummary.unknown }} uninterpretable — e.g. ESM-2 embedding dims)
+            </span>
+          </div>
+          <div class="rd-match-summary-verdict">
+            <span v-if="matchSummary.verdict === 'strong'">Strong support</span>
+            <span v-else-if="matchSummary.verdict === 'moderate'">Moderate support</span>
+            <span v-else>Weak support — prediction likely extrapolated</span>
+          </div>
+        </div>
+
         <div v-for="feat in currentShapFeatures" :key="feat.rank + '-' + feat.feature"
              class="rd-shap-feat">
           <span class="rd-shap-rank">{{ feat.rank }}</span>
@@ -184,6 +201,14 @@
                    background: groupColor(feat.group)
                  }"></div>
           </div>
+          <span class="rd-match-pill"
+                :class="'rd-match-' + matchStatus(feat)"
+                :title="matchTooltip(feat)">
+            <template v-if="matchStatus(feat) === 'hit'">✓</template>
+            <template v-else-if="matchStatus(feat) === 'absent'">✗</template>
+            <template v-else-if="matchStatus(feat) === 'value'">{{ matchValue(feat) }}</template>
+            <template v-else>—</template>
+          </span>
           <span class="rd-shap-feat-value rd-mono">
             {{ feat.pct_importance != null ? feat.pct_importance.toFixed(2) + '%' : feat.mean_abs_shap?.toFixed(3) }}
           </span>
@@ -500,7 +525,7 @@ function formatEvalue(e) {
 }
 
 function foldChange(sim) {
-  const pred = result.value?.km_predicted_uM
+  const pred = props.result?.km_predicted_uM
   const exp = sim?.km_experimental_uM
   if (!pred || !exp || pred <= 0 || exp <= 0) return null
   return pred >= exp ? pred / exp : exp / pred
@@ -509,7 +534,7 @@ function foldChange(sim) {
 function foldChangeLabel(sim) {
   const fc = foldChange(sim)
   if (fc === null) return ''
-  const pred = result.value?.km_predicted_uM
+  const pred = props.result?.km_predicted_uM
   const exp = sim?.km_experimental_uM
   const dir = pred >= exp ? 'higher' : 'lower'
   return `Δ = ${fc.toFixed(1)}× ${dir}`
@@ -521,6 +546,64 @@ function deltaClass(fc) {
   if (fc < 5) return 'rd-km-delta-ok'
   return 'rd-km-delta-warn'
 }
+
+
+// ─── SHAP "Your sequence" column helpers ─────────────────────────────────
+function matchStatus(feat) {
+  const name = feat.feature || ''
+  const computed = props.result.features_computed || {}
+  const pfamHits = (props.result.pfam_hits || []).map(h => h.accession || h)
+
+  let m = name.match(/^pfam_(PF\d+)$/i)
+  if (m) return pfamHits.includes(m[1]) ? 'hit' : 'absent'
+  if (name === 'Pfam n_hits' || name === 'pfam_n_hits') {
+    return pfamHits.length > 0 ? 'hit' : 'absent'
+  }
+  if (/^(motif_|inv_)/.test(name)) {
+    const v = computed[name]
+    if (v == null) return 'unknown'
+    return v > 0 ? 'hit' : 'absent'
+  }
+  if (name.startsWith('phys_')) {
+    return computed[name] != null ? 'value' : 'unknown'
+  }
+  return 'unknown'
+}
+
+function matchValue(feat) {
+  const computed = props.result.features_computed || {}
+  const v = computed[feat.feature]
+  if (v == null || typeof v !== 'number') return '?'
+  return Math.abs(v) < 0.01 ? v.toExponential(1) : v.toFixed(3)
+}
+
+function matchTooltip(feat) {
+  const status = matchStatus(feat)
+  const name = feat.feature
+  if (status === 'hit')     return `${name}: present in your sequence`
+  if (status === 'absent')  return `${name}: not found in your sequence`
+  if (status === 'value')   return `${name}: ${matchValue(feat)}`
+  return `${name}: not directly interpretable (embedding/composition dim)`
+}
+
+const matchSummary = computed(() => {
+  const feats = currentShapFeatures.value || []
+  if (!feats.length) return null
+  let hits = 0, absent = 0, unknown = 0
+  for (const f of feats) {
+    const s = matchStatus(f)
+    if (s === 'hit') hits++
+    else if (s === 'absent') absent++
+    else unknown++
+  }
+  const interpretable = hits + absent
+  if (interpretable === 0) return null
+  const ratio = hits / interpretable
+  let verdict = 'weak'
+  if (ratio >= 0.6) verdict = 'strong'
+  else if (ratio >= 0.3) verdict = 'moderate'
+  return { hits, absent, unknown, total: feats.length, interpretable, verdict }
+})
 
 </script>
 
@@ -899,5 +982,44 @@ function deltaClass(fc) {
 .rd-km-delta-good { background: #c6f6d5; color: #22543d; }
 .rd-km-delta-ok   { background: #faf089; color: #744210; }
 .rd-km-delta-warn { background: #fed7d7; color: #742a2a; }
+
+
+/* ═══ SHAP match summary + status pills ═══════════════════════════════════ */
+.rd-match-summary {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  padding: 10px 14px; margin-bottom: 14px;
+  border-radius: 8px; font-size: 13px;
+  border-left: 4px solid #a0aec0;
+  background: #f7fafc; color: #2d3748;
+}
+.rd-match-summary-main { flex: 1; }
+.rd-match-summary-unknown {
+  color: #a0aec0; font-size: 11px; margin-left: 6px; font-style: italic;
+}
+.rd-match-summary-verdict {
+  font-weight: 600; font-size: 12px; white-space: nowrap;
+  padding: 3px 10px; border-radius: 10px;
+  background: #edf2f7; color: #4a5568;
+}
+.rd-match-verdict-strong   { border-left-color: #38a169; background: #f0fff4; }
+.rd-match-verdict-strong   .rd-match-summary-verdict { background: #c6f6d5; color: #22543d; }
+.rd-match-verdict-moderate { border-left-color: #ecc94b; background: #fffff0; }
+.rd-match-verdict-moderate .rd-match-summary-verdict { background: #faf089; color: #744210; }
+.rd-match-verdict-weak     { border-left-color: #e53e3e; background: #fff5f5; }
+.rd-match-verdict-weak     .rd-match-summary-verdict { background: #fed7d7; color: #742a2a; }
+
+.rd-match-pill {
+  min-width: 40px; padding: 2px 8px;
+  font-size: 11px; font-weight: 600;
+  border-radius: 10px; text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-family: 'Monaco', monospace;
+  cursor: default;
+}
+.rd-match-hit     { background: #c6f6d5; color: #22543d; }
+.rd-match-absent  { background: #fed7d7; color: #742a2a; }
+.rd-match-value   { background: #e2e8f0; color: #4a5568; }
+.rd-match-unknown { background: #f7fafc; color: #a0aec0; }
 
 </style>
