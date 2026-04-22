@@ -105,7 +105,7 @@ MASERHHSHLHQRTQDRFASAASKDLSSRLIDASITPELDQLLAEF..."
               <th>EC Conf</th>
               <th>Km (µM)</th>
               <th>Nearest Match</th>
-              <th>Match Km</th>
+              <th>Experimental Km</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -132,7 +132,14 @@ MASERHHSHLHQRTQDRFASAASKDLSSRLIDASITPELDQLLAEF..."
                 <span v-else>-</span>
               </td>
               <td class="km-exp">
-                {{ result.nearest_neighbor?.km_experimental?.toFixed(1) || '-' }}
+                <a v-if="result.nearest_neighbor?.km_experimental != null"
+                   :href="'https://www.brenda-enzymes.org/enzyme.php?ecno=' + result.ec_predicted"
+                   target="_blank" rel="noopener"
+                   class="brenda-link"
+                   :title="'Look up EC ' + result.ec_predicted + ' on BRENDA'">
+                  {{ result.nearest_neighbor.km_experimental.toFixed(1) }} µM
+                </a>
+                <span v-else>—</span>
               </td>
               <td>
                 <button @click="viewDetail(result)" class="view-btn">Details</button>
@@ -626,4 +633,17 @@ textarea:focus {
 }
 
 .detail-view-component { margin-bottom: 25px; }
+
+.brenda-link {
+  color: #dd6b20;
+  text-decoration: none;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px dotted #dd6b2055;
+}
+.brenda-link:hover {
+  text-decoration: none;
+  border-bottom-color: #dd6b20;
+  color: #c05621;
+}
 </style>
