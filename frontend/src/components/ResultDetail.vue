@@ -197,40 +197,75 @@
       </div>
     </section>
 
-    <!-- ═══ NEAREST DB MATCH & SIMILAR SEQUENCES ════════════════════════ -->
-    <section v-if="result.top_similar && result.top_similar.length > 0" class="rd-section">
+    <!-- NEAREST EXPERIMENTAL-Km NEIGHBORS (BLAST) -->
+    <section class="rd-section">
       <h3 class="rd-section-title">
-        Similar sequences in CarboDB
-        <span class="rd-section-sub">same EC class, with experimental or predicted Km</span>
+        Nearest neighbors with experimental Km
+        <span class="rd-section-sub">BLAST against sequences with BRENDA/SwissProt measurements</span>
       </h3>
-      <table class="rd-table">
-        <thead>
-          <tr>
-            <th>UniProt</th>
-            <th>Organism</th>
-            <th class="num">Km (µM)</th>
-            <th>Source</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="sim in result.top_similar" :key="sim.uniprot_id">
-            <td>
-              <a :href="'https://www.uniprot.org/uniprotkb/' + sim.uniprot_id"
-                 target="_blank" rel="noopener" class="rd-link">
-                {{ sim.uniprot_id }}
-              </a>
-            </td>
-            <td>{{ sim.organism || '—' }}</td>
-            <td class="num rd-mono">
-              {{ sim.km_experimental_uM?.toFixed(1) ?? sim.km_predicted_uM?.toFixed(1) ?? '—' }}
-            </td>
-            <td>
-              <span v-if="sim.reviewed" class="rd-tag rd-tag-reviewed">SwissProt</span>
-              <span v-else class="rd-tag">TrEMBL</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+
+      <div v-if="!result.top_similar || result.top_similar.length === 0" class="rd-neighbor-empty">
+        No experimental-Km reference available for EC <strong>{{ result.ec_predicted || '—' }}</strong>.
+        Either this EC class has no measured Km values in CarboDB, or your sequence
+        did not BLAST-match any of them above the significance threshold.
+      </div>
+
+      <div v-else class="rd-neighbor-list">
+        <div v-for="sim in result.top_similar"
+             :key="sim.uniprot_id"
+             class="rd-neighbor-card"
+             :class="'rd-tier-' + (sim.tier || 'unknown')">
+
+          <div class="rd-neighbor-head">
+            <span class="rd-neighbor-rank">#{{ sim.rank }}</span>
+            <a :href="'https://www.uniprot.org/uniprotkb/' + sim.uniprot_id"
+               target="_blank" rel="noopener" class="rd-link rd-neighbor-uid">
+              {{ sim.uniprot_id }}
+              <span class="rd-external">↗</span>
+            </a>
+            <span class="rd-neighbor-org">{{ sim.organism || 'unknown organism' }}</span>
+            <span class="rd-neighbor-tier">{{ sim.tier_label || sim.tier }}</span>
+          </div>
+
+          <div class="rd-neighbor-identity">
+            <div class="rd-identity-bar">
+              <div class="rd-identity-fill"
+                   :style="{ width: (sim.identity_pct || 0) + '%' }"></div>
+            </div>
+            <span class="rd-identity-label">
+              {{ sim.identity_pct?.toFixed(1) ?? '?' }}% identity
+              <span class="rd-identity-meta">
+                (e={{ formatEvalue(sim.evalue) }},
+                {{ sim.align_length }} aa aligned)
+              </span>
+            </span>
+          </div>
+
+          <div class="rd-km-compare">
+            <div class="rd-km-box rd-km-experimental">
+              <div class="rd-km-label">Measured K<sub>m</sub><span v-if="sim.km_exp_substrate">
+                ({{ sim.km_exp_substrate }})</span></div>
+              <div class="rd-km-value">
+                {{ sim.km_experimental_uM?.toFixed(1) ?? '—' }}
+                <span class="rd-km-unit">µM</span>
+              </div>
+            </div>
+            <div class="rd-km-arrow">↔</div>
+            <div class="rd-km-box rd-km-predicted">
+              <div class="rd-km-label">Your predicted K<sub>m</sub></div>
+              <div class="rd-km-value">
+                {{ result.km_predicted_uM?.toFixed(1) ?? '—' }}
+                <span class="rd-km-unit">µM</span>
+              </div>
+            </div>
+            <div v-if="foldChange(sim) !== null"
+                 class="rd-km-delta"
+                 :class="deltaClass(foldChange(sim))">
+              {{ foldChangeLabel(sim) }}
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ═══ FOOTER METADATA ══════════════════════════════════════════════ -->
@@ -452,6 +487,39 @@ function featureDisplay(name) {
   if (name.startsWith('inv_'))   return 'catalytic ' + name.slice(4).replace(/_/g, ' ')
   if (name.startsWith('esm2_'))  return 'ESM-2 dim ' + name.slice(5)
   return name
+}
+
+
+// Nearest-neighbor helper functions (BLAST hits)
+function formatEvalue(e) {
+  if (e === null || e === undefined) return '?'
+  if (e === 0) return '0'
+  if (e < 1e-100) return '<1e-100'
+  if (e < 0.01) return e.toExponential(1)
+  return e.toFixed(3)
+}
+
+function foldChange(sim) {
+  const pred = result.value?.km_predicted_uM
+  const exp = sim?.km_experimental_uM
+  if (!pred || !exp || pred <= 0 || exp <= 0) return null
+  return pred >= exp ? pred / exp : exp / pred
+}
+
+function foldChangeLabel(sim) {
+  const fc = foldChange(sim)
+  if (fc === null) return ''
+  const pred = result.value?.km_predicted_uM
+  const exp = sim?.km_experimental_uM
+  const dir = pred >= exp ? 'higher' : 'lower'
+  return `Δ = ${fc.toFixed(1)}× ${dir}`
+}
+
+function deltaClass(fc) {
+  if (fc === null) return ''
+  if (fc < 2) return 'rd-km-delta-good'
+  if (fc < 5) return 'rd-km-delta-ok'
+  return 'rd-km-delta-warn'
 }
 
 </script>
@@ -738,4 +806,98 @@ function featureDisplay(name) {
   .rd-shap-feat { grid-template-columns: 20px 1fr 40px; }
   .rd-shap-feat-bar { display: none; }
 }
+
+/* Nearest-neighbor cards (BLAST hits) */
+.rd-neighbor-empty {
+  padding: 20px 24px; background: #f7fafc;
+  border: 1px dashed #cbd5e0; border-radius: 8px;
+  color: #718096; font-size: 13px; text-align: center; line-height: 1.6;
+}
+.rd-neighbor-list {
+  display: flex; flex-direction: column; gap: 12px;
+}
+.rd-neighbor-card {
+  padding: 14px 18px; background: #fff;
+  border: 1px solid #e2e8f0; border-left: 4px solid #a0aec0;
+  border-radius: 8px; transition: box-shadow 0.15s;
+}
+.rd-neighbor-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+
+.rd-neighbor-card.rd-tier-swissprot_experimental { border-left-color: #38a169; }
+.rd-neighbor-card.rd-tier-brenda_experimental    { border-left-color: #3182ce; }
+.rd-neighbor-card.rd-tier-trembl_experimental    { border-left-color: #319795; }
+.rd-neighbor-card.rd-tier-swissprot_predicted    { border-left-color: #a0aec0; }
+.rd-neighbor-card.rd-tier-brenda_predicted       { border-left-color: #a0aec0; }
+.rd-neighbor-card.rd-tier-trembl_predicted       { border-left-color: #cbd5e0; }
+
+.rd-neighbor-head {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px; flex-wrap: wrap;
+}
+.rd-neighbor-rank {
+  font-family: 'Monaco', monospace; font-size: 13px; font-weight: 700;
+  color: #718096; min-width: 24px;
+}
+.rd-neighbor-uid {
+  font-family: 'Monaco', monospace; font-weight: 600;
+}
+.rd-external { font-size: 10px; opacity: 0.6; margin-left: 2px; }
+.rd-neighbor-org {
+  font-style: italic; color: #4a5568; font-size: 13px; flex: 1;
+}
+.rd-neighbor-tier {
+  font-size: 11px; font-weight: 600; padding: 3px 10px;
+  border-radius: 10px; background: #edf2f7; color: #4a5568;
+  white-space: nowrap;
+}
+.rd-tier-swissprot_experimental .rd-neighbor-tier { background: #c6f6d5; color: #22543d; }
+.rd-tier-brenda_experimental    .rd-neighbor-tier { background: #bee3f8; color: #2a4365; }
+.rd-tier-trembl_experimental    .rd-neighbor-tier { background: #b2f5ea; color: #234e52; }
+
+.rd-neighbor-identity {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+}
+.rd-identity-bar {
+  flex: 1; height: 8px; background: #edf2f7;
+  border-radius: 4px; overflow: hidden;
+}
+.rd-identity-fill {
+  height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, #667eea, #5568d3);
+}
+.rd-identity-label {
+  font-size: 13px; color: #2d3748; font-weight: 500;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.rd-identity-meta {
+  font-size: 11px; color: #a0aec0; font-weight: 400;
+  margin-left: 6px; font-family: 'Monaco', monospace;
+}
+
+.rd-km-compare {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 14px; background: #fafbfc;
+  border-radius: 6px; border: 1px solid #edf2f7;
+}
+.rd-km-box { flex: 1; min-width: 120px; }
+.rd-km-label {
+  font-size: 10px; font-weight: 600; color: #718096;
+  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;
+}
+.rd-km-value {
+  font-family: 'Monaco', monospace; font-size: 18px; font-weight: 600;
+  color: #2d3748; font-variant-numeric: tabular-nums;
+}
+.rd-km-unit { font-size: 12px; color: #a0aec0; font-weight: 400; margin-left: 2px; }
+.rd-km-arrow { color: #cbd5e0; font-size: 18px; font-weight: 300; }
+.rd-km-experimental .rd-km-value { color: #2c5282; }
+.rd-km-predicted    .rd-km-value { color: #4a5568; }
+.rd-km-delta {
+  padding: 4px 10px; border-radius: 12px; font-size: 11px;
+  font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.rd-km-delta-good { background: #c6f6d5; color: #22543d; }
+.rd-km-delta-ok   { background: #faf089; color: #744210; }
+.rd-km-delta-warn { background: #fed7d7; color: #742a2a; }
+
 </style>

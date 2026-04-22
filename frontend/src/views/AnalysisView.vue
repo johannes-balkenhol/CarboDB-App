@@ -36,9 +36,9 @@ Example: MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
           <div class="mode-select">
             <label>Mode:</label>
             <select v-model="selectedMode">
-              <option value="fast">⚡ Fast (~5s, Composition+Pfam)</option>
-              <option value="standard">◈ Standard (~15s, +ESM-2)</option>
-              <option value="pfam">◇ Pfam-only (~3s)</option>
+              <option value="fast">⚡ Fast (~5s, ablation without ESM-2)</option>
+              <option value="standard">◈ Standard (~15s, +ESM-2) — benchmark pipeline (R²=0.953)</option>
+              <option value="pfam">◇ Pfam-only (~3s, ablation)</option>
               <option value="composite">✦ Composite (~25s, Best CI)</option>
             </select>
           </div>
@@ -170,7 +170,7 @@ const fastaInput = ref('')
 const loading = ref(false)
 const error = ref(null)
 
-const selectedMode = ref('fast')
+const selectedMode = ref('standard')
 const selectedKingdom = ref('plant')
 const batchResults = ref([])
 const summary = ref({ total: 0, consensus_positive: 0, with_neighbor: 0 })
@@ -202,7 +202,7 @@ async function predictSingle() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sequence: singleSequence.value.trim(),
-        mode: selectedMode.value || 'fast',
+        mode: selectedMode.value || 'standard',
         kingdom: selectedKingdom.value || 'plant'
       })
     })
@@ -250,7 +250,7 @@ async function predictBatch() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         fasta: fastaInput.value.trim(),
-        mode:    selectedMode.value || 'fast',
+        mode:    selectedMode.value || 'standard',
         kingdom: selectedKingdom.value || 'plant',
       })
     })
