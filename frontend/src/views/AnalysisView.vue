@@ -5,7 +5,6 @@
 
     <!-- Input Section -->
     <div class="input-section">
-      <div class="input-header">
       <!-- Unified input: 1 sequence = single predict, 2+ = batch job -->
       <div class="unified-input">
         <div class="input-header">
@@ -62,6 +61,7 @@ MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
           <span v-else>Analyzing...</span>
         </button>
       </div>
+    </div>
 
     <!-- Batch Results Summary -->
     <div v-if="batchResults && batchResults.length > 0" class="batch-results">
