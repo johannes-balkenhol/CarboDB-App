@@ -6,40 +6,41 @@
     <!-- Input Section -->
     <div class="input-section">
       <div class="input-header">
-        <div class="input-tabs">
-          <button 
-            :class="{ active: inputMode === 'single' }" 
-            @click="inputMode = 'single'"
-          >Single Sequence</button>
-          <button 
-            :class="{ active: inputMode === 'batch' }" 
-            @click="inputMode = 'batch'"
-          >Batch (FASTA)</button>
+      <!-- Unified input: 1 sequence = single predict, 2+ = batch job -->
+      <div class="unified-input">
+        <div class="input-header">
+          <span class="input-header-label">Sequence input</span>
+          <span class="input-header-hint">
+            Paste one sequence (raw or FASTA) for an instant result; multiple FASTA sequences run as a batch.
+          </span>
+          <label class="file-upload">
+            <input type="file" @change="handleFileUpload" accept=".fasta,.fa,.txt" />
+            📁 Upload FASTA
+          </label>
         </div>
-        <div class="example-buttons">
-          <span class="example-label">Try example:</span>
-          <button @click="loadExample('rubisco')" class="example-btn">RuBisCO</button>
-          <button @click="loadExample('pepc')" class="example-btn">PEPC</button>
-          <button @click="loadExample('ca')" class="example-btn">Carbonic Anhydrase</button>
-        </div>
-      </div>
 
-      <div v-if="inputMode === 'single'" class="single-input">
-        <textarea 
-          v-model="singleSequence" 
-          placeholder="Enter protein sequence (amino acids only)...
-
-Example: MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
-          rows="6"
+        <textarea
+          v-model="fastaInput"
+          placeholder=">RuBisCO_spinach
+MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
+          rows="8"
         ></textarea>
+
+        <div v-if="detectedSeqCount >= 2" class="seq-count-notice"
+             :class="detectedSeqCount > 20 ? 'seq-count-warn' : 'seq-count-info'">
+          <strong>{{ detectedSeqCount }} sequences detected.</strong>
+          Will run as a batch job (~{{ Math.max(1, Math.round(detectedSeqCount * (selectedMode === 'standard' ? 15 : 3) / 60)) }} min).
+          <span v-if="detectedSeqCount > 20"> You can leave this tab open.</span>
+        </div>
+
         <div class="mode-kingdom-row">
           <div class="mode-select">
             <label>Mode:</label>
             <select v-model="selectedMode">
-              <option value="fast">⚡ Fast (~5s, ablation without ESM-2)</option>
-              <option value="standard">◈ Standard (~15s, +ESM-2) — benchmark pipeline (R²=0.953)</option>
-              <option value="pfam">◇ Pfam-only (~3s, ablation)</option>
-              <option value="composite">✦ Composite (~25s, Best CI)</option>
+              <option value="fast">Fast (~5s, ablation without ESM-2)</option>
+              <option value="standard">Standard (~15s, +ESM-2) benchmark pipeline (R2=0.953)</option>
+              <option value="pfam">Pfam-only (~3s, ablation)</option>
+              <option value="composite">Composite (~25s, Best CI)</option>
             </select>
           </div>
           <div class="kingdom-select">
@@ -52,31 +53,15 @@ Example: MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
             </select>
           </div>
         </div>
-        <button @click="predictSingle" :disabled="loading" class="predict-btn">
-          {{ loading ? 'Analyzing...' : '🔬 Analyze Sequence' }}
+
+        <button @click="analyze" :disabled="loading" class="predict-btn">
+          <span v-if="!loading">🔬 Analyze {{ detectedSeqCount >= 2 ? `${detectedSeqCount} sequences` : 'Sequence' }}</span>
+          <span v-else-if="batchProgress">
+            Analyzing batch: {{ batchProgress.processed }}/{{ batchProgress.total }} ({{ batchProgress.progressPct || 0 }}%)
+          </span>
+          <span v-else>Analyzing...</span>
         </button>
       </div>
-
-      <div v-else class="batch-input">
-        <textarea 
-          v-model="fastaInput" 
-          placeholder=">RuBisCO_spinach
-MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG...
->PEPC_maize
-MASERHHSHLHQRTQDRFASAASKDLSSRLIDASITPELDQLLAEF..."
-          rows="10"
-        ></textarea>
-        <div class="batch-actions">
-          <label class="file-upload">
-            <input type="file" @change="handleFileUpload" accept=".fasta,.fa,.txt" />
-            📁 Upload FASTA
-          </label>
-          <button @click="predictBatch" :disabled="loading" class="predict-btn">
-            {{ loading ? 'Analyzing...' : '🔬 Analyze Batch' }}
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- Batch Results Summary -->
     <div v-if="batchResults && batchResults.length > 0" class="batch-results">
@@ -166,7 +151,7 @@ MASERHHSHLHQRTQDRFASAASKDLSSRLIDASITPELDQLLAEF..."
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import ResultDetail from '@/components/ResultDetail.vue'
 
 const API_URL = ''
@@ -175,6 +160,7 @@ const inputMode = ref('single')
 const singleSequence = ref('')
 const fastaInput = ref('')
 const loading = ref(false)
+const batchProgress = ref(null)
 const error = ref(null)
 
 const selectedMode = ref('standard')
@@ -242,39 +228,146 @@ async function predictSingle() {
   loading.value = false
 }
 
+let batchPollInterval = null
+
+function clearBatchPoll() {
+  if (batchPollInterval) {
+    clearInterval(batchPollInterval)
+    batchPollInterval = null
+  }
+}
+
 async function predictBatch() {
   if (!fastaInput.value.trim()) {
     error.value = 'Please enter FASTA sequences'
     return
   }
-
   loading.value = true
   error.value = null
+  batchProgress.value = null
+  clearBatchPoll()
+
+  let mode = selectedMode.value || 'standard'
+  if (mode !== 'fast' && mode !== 'standard') mode = 'standard'
+  const kingdom = selectedKingdom.value || 'plant'
 
   try {
-    const res = await fetch(`${API_URL}/api/v1/batch`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fasta: fastaInput.value.trim(),
-        mode:    selectedMode.value || 'standard',
-        kingdom: selectedKingdom.value || 'plant',
-      })
-    })
+    const formData = new FormData()
+    const fastaBlob = new Blob([fastaInput.value.trim()], { type: 'text/plain' })
+    formData.append('file', fastaBlob, 'batch.fasta')
+    formData.append('mode', mode)
+    formData.append('kingdom', kingdom)
 
-    const data = await res.json()
-    
-    if (data.success) {
-      batchResults.value = data.results
-      summary.value = data.summary || { total: data.results.length, consensus_positive: 0, with_neighbor: 0 }
-    } else {
-      error.value = data.error || 'Batch prediction failed'
+    const submitRes = await fetch(`${API_URL}/api/v1/batch`, { method: 'POST', body: formData })
+    if (!submitRes.ok) {
+      const errText = await submitRes.text()
+      throw new Error(`Submit failed (HTTP ${submitRes.status}): ${errText}`)
     }
-  } catch (e) {
-    error.value = `Request failed: ${e.message}`
-  }
+    const submitData = await submitRes.json()
+    const jobId = submitData.job_id
+    if (!jobId) throw new Error('Backend did not return a job_id')
 
-  loading.value = false
+    batchProgress.value = {
+      jobId, status: 'queued', processed: 0,
+      total: submitData.n_sequences, progressPct: 0,
+      estimatedMinutes: submitData.estimated_minutes
+    }
+
+    batchPollInterval = setInterval(async () => {
+      try {
+        const pollRes = await fetch(`${API_URL}/api/v1/jobs/${jobId}`)
+        if (!pollRes.ok) throw new Error(`Poll failed (HTTP ${pollRes.status})`)
+        const meta = await pollRes.json()
+        batchProgress.value = {
+          jobId, status: meta.status,
+          processed: meta.processed || 0,
+          total: meta.n_sequences,
+          progressPct: meta.progress_pct || 0
+        }
+        if (meta.status === 'completed') {
+          clearBatchPoll()
+          await loadBatchResults(jobId)
+          loading.value = false
+        } else if (meta.status === 'failed') {
+          clearBatchPoll()
+          error.value = `Batch job failed: ${meta.error || 'unknown error'}`
+          loading.value = false
+        }
+      } catch (e) {
+        clearBatchPoll()
+        error.value = `Polling error: ${e.message}`
+        loading.value = false
+      }
+    }, 3000)
+  } catch (e) {
+    clearBatchPoll()
+    error.value = `Request failed: ${e.message}`
+    loading.value = false
+  }
+}
+
+async function loadBatchResults(jobId) {
+  const tsvRes = await fetch(`${API_URL}/api/v1/jobs/${jobId}/results.tsv`)
+  if (!tsvRes.ok) throw new Error(`Download failed (HTTP ${tsvRes.status})`)
+  const tsv = await tsvRes.text()
+  const textLines = tsv.split('\n').filter(l => l.trim())
+  if (textLines.length < 2) {
+    error.value = 'Batch job completed but produced no results'
+    return
+  }
+  const headers = textLines[0].split('\t')
+  const rows = textLines.slice(1).map(line => {
+    const cells = line.split('\t')
+    const row = {}
+    headers.forEach((h, i) => { row[h] = cells[i] || '' })
+    const nnUid = row.nearest_uniprot || ''
+    const nnKm = parseFloat(row.nearest_km_exp_uM || '')
+    return {
+      id: row.seq_id || row.id || 'query',
+      length: parseInt(row.length || '0', 10),
+      co2_prob_v3: parseFloat(row.prob_binary || row.carboxylase_probability || '0'),
+      carboxylase_probability: parseFloat(row.prob_binary || row.carboxylase_probability || '0'),
+      consensus: (row.is_carboxylase || '').toLowerCase() === 'true' || (row.consensus || '').toLowerCase() === 'yes',
+      is_carboxylase: (row.is_carboxylase || '').toLowerCase() === 'true' || (row.consensus || '').toLowerCase() === 'yes',
+      ec_predicted: row.ec_predicted || '',
+      ec_confidence: parseFloat(row.ec_confidence || '0'),
+      km_predicted_uM: parseFloat(row.km_predicted_uM || ''),
+      nearest_neighbor: nnUid ? {
+        uniprot_id: nnUid,
+        km_experimental: isFinite(nnKm) ? nnKm : null,
+        organism: row.nearest_organism || '',
+        identity_pct: parseFloat(row.nearest_pident || ''),
+        tier: row.nearest_tier || ''
+      } : null,
+      _tsvRow: row
+    }
+  })
+  batchResults.value = rows
+  summary.value = {
+    total: rows.length,
+    consensus_positive: rows.filter(r => r.consensus).length,
+    with_neighbor: rows.filter(r => r.nearest_neighbor).length
+  }
+}
+
+const detectedSeqCount = computed(() => {
+  const text = fastaInput.value || ''
+  const n = (text.match(/^>/gm) || []).length
+  if (n === 0) return text.trim().length > 0 ? 1 : 0
+  return n
+})
+
+async function analyze() {
+  const n = detectedSeqCount.value
+  if (n === 0) {
+    error.value = 'Please enter a sequence'
+    return
+  }
+  if (n === 1) {
+    await predictSingle()
+  } else {
+    await predictBatch()
+  }
 }
 
 function handleFileUpload(event) {
@@ -324,6 +417,8 @@ function getProbClass(prob) {
   if (prob >= 0.5) return 'prob-medium'
   return 'prob-low'
 }
+
+onUnmounted(() => { clearBatchPoll() })
 </script>
 
 <style scoped>
@@ -646,4 +741,12 @@ textarea:focus {
   border-bottom-color: #dd6b20;
   color: #c05621;
 }
+
+.unified-input .input-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+.input-header-label { font-size: 13px; font-weight: 600; color: #2d3748; text-transform: uppercase; letter-spacing: 0.05em; }
+.input-header-hint { font-size: 12px; color: #a0aec0; flex: 1; line-height: 1.5; }
+.seq-count-notice { margin: 10px 0; padding: 8px 12px; border-radius: 6px; font-size: 13px; line-height: 1.5; }
+.seq-count-info { background: #ebf8ff; color: #2c5282; border-left: 3px solid #4299e1; }
+.seq-count-warn { background: #fffaf0; color: #744210; border-left: 3px solid #ecc94b; }
+
 </style>
