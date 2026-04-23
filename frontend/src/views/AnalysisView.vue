@@ -381,8 +381,65 @@ function handleFileUpload(event) {
   }
 }
 
-function viewDetail(result) {
-  selectedResult.value = result
+function parseFastaMap(fasta) {
+  // Parse FASTA text into { seq_id: raw_aa_sequence }
+  const map = {}
+  const chunks = (fasta || '').split(/^>/m).filter(s => s.trim())
+  for (const c of chunks) {
+    const [header, ...rest] = c.split('\n')
+    const id = header.trim().split(/\s+/)[0]
+    map[id] = rest.join('').replace(/\s+/g, '')
+  }
+  return map
+}
+
+async function viewDetail(result) {
+  // If the row has full per-sequence data already (single predict, or already re-fetched),
+  // just show it. Batch rows lack features_computed/shap/top_similar, so re-fetch those.
+  if (result.features_computed || result.shap) {
+    selectedResult.value = result
+    return
+  }
+
+  // Batch row: find raw sequence by id, re-call /predict for full data
+  const seqMap = parseFastaMap(fastaInput.value)
+  const rawSeq = seqMap[result.id]
+  if (!rawSeq) {
+    // Fall back to the shallow row — at least show what we have
+    selectedResult.value = result
+    return
+  }
+
+  // Show shallow row immediately so the panel opens without a blank wait
+  selectedResult.value = { ...result, _loadingDetails: true }
+
+  try {
+    const res = await fetch(`${API_URL}/api/v1/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sequence: rawSeq,
+        mode: selectedMode.value || 'standard',
+        kingdom: selectedKingdom.value || 'plant'
+      })
+    })
+    const data = await res.json()
+    if (data.ec_predicted) {
+      // Merge fresh predict response with the row's id + derived fields
+      selectedResult.value = {
+        ...data,
+        id: result.id,
+        length: data.sequence_length,
+        co2_prob_v3: data.carboxylase_probability,
+        co2_prob_v5: data.carboxylase_probability,
+        consensus: data.is_carboxylase,
+        nearest_neighbor: data.top_similar?.[0] || null
+      }
+    }
+  } catch (e) {
+    // If re-fetch fails, keep the shallow result so user sees something
+    selectedResult.value = result
+  }
 }
 
 function downloadResults() {
