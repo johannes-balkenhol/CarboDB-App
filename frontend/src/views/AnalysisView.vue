@@ -37,7 +37,7 @@ MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
         <div v-if="detectedSeqCount >= 2" class="seq-count-notice"
              :class="detectedSeqCount > 20 ? 'seq-count-warn' : 'seq-count-info'">
           <strong>{{ detectedSeqCount }} sequences detected.</strong>
-          Will run as a batch job (~{{ Math.max(1, Math.round(detectedSeqCount * (selectedMode === 'standard' ? 15 : 3) / 60)) }} min).
+          Will run as a batch job (~{{ Math.max(1, Math.round(detectedSeqCount * (selectedMode === 'standard' ? 90 : 3) / 60)) }} min).
           <span v-if="detectedSeqCount > 20"> You can leave this tab open.</span>
         </div>
 
@@ -365,7 +365,7 @@ async function loadBatchResults(jobId) {
       _tsvRow: row
     }
   })
-  batchResults.value = rows
+  batchResults.value = rows.map(r => ({ ...r, _jobId: jobId }))
   summary.value = {
     total: rows.length,
     consensus_positive: rows.filter(r => r.consensus).length,
@@ -437,18 +437,26 @@ async function viewDetail(result) {
   selectedResult.value = { ...result, _loadingDetails: true }
 
   try {
-    const res = await fetch(`${API_URL}/api/v1/predict`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sequence: rawSeq,
-        mode: selectedMode.value || 'standard',
-        kingdom: selectedKingdom.value || 'plant'
+    // Prefer the cached per-seq JSON the batch worker saved (instant — no re-predict)
+    let data = null
+    if (result._jobId) {
+      const cacheRes = await fetch(`${API_URL}/api/v1/jobs/${result._jobId}/seq/${result.id}`)
+      if (cacheRes.ok) data = await cacheRes.json()
+    }
+    // Fall back to a fresh /predict call only if the cache lookup failed
+    if (!data || !data.ec_predicted) {
+      const res = await fetch(`${API_URL}/api/v1/predict`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sequence: rawSeq,
+          mode: selectedMode.value || 'standard',
+          kingdom: selectedKingdom.value || 'plant'
+        })
       })
-    })
-    const data = await res.json()
-    if (data.ec_predicted) {
-      // Merge fresh predict response with the row's id + derived fields
+      data = await res.json()
+    }
+    if (data && data.ec_predicted) {
       selectedResult.value = {
         ...data,
         id: result.id,
@@ -460,7 +468,6 @@ async function viewDetail(result) {
       }
     }
   } catch (e) {
-    // If re-fetch fails, keep the shallow result so user sees something
     selectedResult.value = result
   }
 }

@@ -383,33 +383,18 @@ const pfamNormalized = computed(() => {
 
 // ─── Motif interpretation ────────────────────────────────────────────────
 // The pipeline computes 7 EC-specific regex motifs. Surface them with labels.
-// Motif keys map to EC numbers with digits concatenated (motif_4111 = EC 4.1.1.1).
-// The 'inv_*' keys are the human-readable catalytic-core signatures.
+// 7 motif features computed by scripts/04a_composition.ec_motifs()
+// (the 'inv_*' catalytic-core inputs are now grouped under inv_cat_* and shown via SHAP)
 const MOTIF_META = {
-  // Catalytic core signatures (inv_*)
-  inv_rubisco_sig: { label: 'RuBisCO signature',  description: 'RuBisCO large-subunit catalytic core' },
-  inv_pepc_sig:    { label: 'PEPC signature',     description: 'PEP carboxylase catalytic region' },
-  inv_ca_zinc:     { label: 'CA zinc site',       description: 'Carbonic anhydrase zinc coordination' },
-  inv_atp_grasp:   { label: 'ATP-grasp fold',     description: 'Biotin carboxylase ATP-binding fold' },
-  inv_amkm:        { label: 'AMKM motif',         description: 'Biotin attachment Ala-Met-Lys-Met context' },
-  // EC-specific regex motifs (motif_* — keyed by EC number digits)
-  motif_4111:  { label: 'Pyruvate decarboxylase (4.1.1.1)',  description: 'PDC regex motif' },
-  motif_4113:  { label: 'Oxaloacetate decarboxylase (4.1.1.3)', description: 'OAA decarboxylase motif' },
-  motif_4113b: { label: 'OAA decarb. alt (4.1.1.3)',         description: 'OAA decarboxylase alt form' },
-  motif_4113c: { label: 'OAA decarb. alt2 (4.1.1.3)',        description: 'OAA decarboxylase alt form 2' },
-  motif_4114:  { label: 'Acetolactate decarb. (4.1.1.4)',    description: 'Acetolactate decarboxylase motif' },
-  motif_41112: { label: 'β-Carbonic anhydrase (4.1.1.112)',  description: 'β-CA motif' },
-  motif_41149: { label: 'PEPCK ATP (4.1.1.49)',              description: 'PEP carboxykinase ATP form' },
-  motif_4211:  { label: 'Carbonic anhydrase (4.2.1.1)',      description: 'CA superfamily motif' },
-  motif_6316:  { label: 'Acetyl-CoA synth. (6.3.1.6)',       description: 'Acetate-CoA ligase motif' },
-  motif_6333:  { label: 'Dethiobiotin synth. (6.3.3.3)',     description: 'Dethiobiotin synthase motif' },
-  motif_6341:  { label: 'Carbamoyl-P synth. (6.3.4.1)',      description: 'Carbamoyl-phosphate motif' },
-  motif_6341b: { label: 'Carbamoyl-P alt (6.3.4.1)',         description: 'Carbamoyl-phosphate alt form' },
-  motif_6355:  { label: 'Carbamoyl-P synth. (6.3.5.5)',      description: 'Carbamoyl-P synthase large' },
-  motif_6411:  { label: 'Pyruvate carboxylase (6.4.1.1)',    description: 'Pyruvate carboxylase motif' },
-  motif_6412:  { label: 'Acetyl-CoA carb. (6.4.1.2)',        description: 'ACC motif' },
-  motif_6413:  { label: 'Propionyl-CoA carb. (6.4.1.3)',     description: 'PCC motif' },
-  motif_6414:  { label: '3-MCC (6.4.1.4)',                   description: '3-methylcrotonyl-CoA carb.' },
+  // 7 sequence-motif features computed by scripts/04a_composition.ec_motifs().
+  // These match the training-time vocabulary the Km/EC models were built on.
+  motif_rubisco_kk:     { label: 'RuBisCO K-K motif',        description: 'Lys-Lys spaced 1–3 residues apart (RuBisCO active-site lysines)' },
+  motif_rubisco_gk:     { label: 'RuBisCO G-K motif',        description: 'Gly-Lys spaced 0–2 residues apart (RuBisCO P-loop region)' },
+  motif_ca_hh:          { label: 'CA H-H motif',             description: 'His-His spaced 1–4 residues apart (carbonic anhydrase zinc binding)' },
+  motif_ca_his_cluster: { label: 'CA His cluster',           description: 'Three histidines within ~10 residues (CA active-site triad)' },
+  motif_pepc_rr:        { label: 'PEPC R-R motif',           description: 'Arg-Arg pair (PEP carboxylase substrate binding)' },
+  motif_biotin_mk:      { label: 'Biotin M-K motif',         description: 'Met-Lys (biotin attachment context)' },
+  motif_biotin_amk:     { label: 'Biotin A-M-K motif',       description: 'Ala-Met-Lys triplet (biotin carboxylase signature)' },
 }
 const motifHits = computed(() => {
   const f = props.result.features_computed || {}
