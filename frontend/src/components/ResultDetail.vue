@@ -56,13 +56,48 @@
       </div>
 
       <div class="rd-metric">
-        <div class="rd-metric-label">Predicted Km (CO₂)</div>
+        <div class="rd-metric-label">Predicted Km</div>
         <div class="rd-metric-value rd-metric-km" v-if="result.km_predicted_uM != null">
           {{ result.km_predicted_uM.toFixed(1) }} <span class="rd-unit">µM</span>
         </div>
         <div class="rd-metric-value rd-metric-na" v-else>—</div>
         <div class="rd-metric-sub" v-if="result.km_predicted_log10 != null">
           log₁₀ = {{ result.km_predicted_log10.toFixed(2) }} mM
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ HEADLINE Km COMPARISON ═══════════════════════════════════════ -->
+    <!-- Surfaces predicted Km vs the BLAST top-hit's experimental Km right at the top -->
+    <section v-if="topKmHit" class="rd-section rd-km-headline">
+      <h3 class="rd-section-title">Predicted vs experimental Km</h3>
+      <div class="rd-km-compare rd-km-compare-headline">
+        <div class="rd-km-box rd-km-experimental">
+          <div class="rd-km-label">Predicted K<sub>m</sub></div>
+          <div class="rd-km-value">
+            {{ result.km_predicted_uM?.toFixed(1) ?? '—' }}
+            <span class="rd-km-unit">µM</span>
+          </div>
+          <div class="rd-km-sub">your sequence</div>
+        </div>
+        <div class="rd-km-arrow">↔</div>
+        <div class="rd-km-box rd-km-predicted">
+          <div class="rd-km-label">Experimental K<sub>m</sub><span v-if="topKmHit.km_exp_substrate">
+            ({{ topKmHit.km_exp_substrate }})</span></div>
+          <div class="rd-km-value">
+            {{ topKmHit.km_experimental_uM?.toFixed(1) ?? '—' }}
+            <span class="rd-km-unit">µM</span>
+          </div>
+          <div class="rd-km-sub">
+            {{ topKmHit.uniprot_id }} ·
+            {{ topKmHit.identity_pct?.toFixed(1) }}% identity ·
+            BRENDA
+          </div>
+        </div>
+        <div v-if="foldChange(topKmHit) !== null"
+             class="rd-km-delta"
+             :class="deltaClass(foldChange(topKmHit))">
+          {{ foldChangeLabel(topKmHit) }}
         </div>
       </div>
     </section>
@@ -186,7 +221,8 @@
         </div>
 
         <div v-for="feat in currentShapFeatures" :key="feat.rank + '-' + feat.feature"
-             class="rd-shap-feat">
+             class="rd-shap-feat"
+             :title="explainFeature(feat)">
           <span class="rd-shap-rank">{{ feat.rank }}</span>
           <div class="rd-shap-feat-main">
             <span class="rd-shap-feat-name rd-mono">{{ featureDisplay(feat.feature) }}</span>
@@ -225,7 +261,7 @@
     <!-- NEAREST EXPERIMENTAL-Km NEIGHBORS (BLAST) -->
     <section class="rd-section">
       <h3 class="rd-section-title">
-        Nearest neighbors with experimental Km
+        Nearest hits with experimental Km
         <span class="rd-section-sub">BLAST against sequences with BRENDA/SwissProt measurements</span>
       </h3>
 
@@ -268,7 +304,7 @@
 
           <div class="rd-km-compare">
             <div class="rd-km-box rd-km-experimental">
-              <div class="rd-km-label">Measured K<sub>m</sub><span v-if="sim.km_exp_substrate">
+              <div class="rd-km-label">Experimental K<sub>m</sub><span v-if="sim.km_exp_substrate">
                 ({{ sim.km_exp_substrate }})</span></div>
               <div class="rd-km-value">
                 {{ sim.km_experimental_uM?.toFixed(1) ?? '—' }}
@@ -277,7 +313,7 @@
             </div>
             <div class="rd-km-arrow">↔</div>
             <div class="rd-km-box rd-km-predicted">
-              <div class="rd-km-label">Your predicted K<sub>m</sub></div>
+              <div class="rd-km-label">Predicted K<sub>m</sub></div>
               <div class="rd-km-value">
                 {{ result.km_predicted_uM?.toFixed(1) ?? '—' }}
                 <span class="rd-km-unit">µM</span>
@@ -441,7 +477,6 @@ const shapTabs = computed(() => {
   return [
     { id: 'ec_classification', label: 'EC class',     count: (s.ec_classification || []).length },
     { id: 'km_regression',     label: 'Km',           count: (s.km_regression || []).length },
-    { id: 'binary_global',     label: 'Carboxylase',  count: (s.binary_global || []).length },
   ].filter(t => t.count > 0)
 })
 
@@ -532,6 +567,127 @@ function deltaClass(fc) {
   return 'rd-km-delta-warn'
 }
 
+
+// Top BLAST hit that has an experimental Km (used for the headline comparison block).
+// Looks at top_similar (already sorted by identity desc) and picks the first entry with a Km.
+const topKmHit = computed(() => {
+  const sims = props.result?.top_similar || []
+  return sims.find(s => s?.km_experimental_uM != null && s.km_experimental_uM > 0) || null
+})
+
+// ─── Feature interpretation tooltips ─────────────────────────────────────
+// Builds a human-readable explanation for each SHAP feature shown in the
+// top-N list. Type-aware: Pfam IDs get domain context, ESM-2 dims get an
+// honest disclaimer, motifs surface their MOTIF_META description, etc.
+function explainFeature(feat) {
+  if (!feat) return ''
+  const name = feat.feature || ''
+  const grp = feat.group || ''
+  const imp = feat.pct_importance != null
+    ? `Importance: ${feat.pct_importance.toFixed(2)}%`
+    : (feat.mean_abs_shap != null ? `mean |SHAP| = ${feat.mean_abs_shap.toFixed(3)}` : '')
+  const direction = feat.direction
+    ? (feat.direction === 'low_km' ? 'lower Km' : feat.direction === 'high_km' ? 'higher Km' : feat.direction)
+    : null
+  const ecCtx = feat.ec_name ? ` for ${feat.ec_name} (EC ${feat.ec})` : ''
+  const corr = feat.km_pearson_r != null
+    ? `Training Pearson r with log10(Km) = ${feat.km_pearson_r.toFixed(2)}`
+    : null
+
+  // Pfam family hit
+  if (name.startsWith('pfam_PF')) {
+    const acc = name.replace('pfam_', '')
+    const hit = (props.result.pfam_hits || []).find(h => (h.accession || h) === acc)
+    const desc = hit?.name ? `${acc}: ${hit.name}` : acc
+    const stats = hit?.e_value != null ? ` (e=${formatEvalue(hit.e_value)}, bits=${hit.bitscore?.toFixed(0) ?? '?'})` : ''
+    return [`Pfam domain ${desc}${stats}`, imp + ecCtx,
+            direction ? `Direction: ${direction}` : null, corr]
+           .filter(Boolean).join(' · ')
+  }
+  // Pfam n_hits aggregate
+  if (name === 'pfam_n_hits') {
+    const n = (props.result.pfam_hits || []).length
+    return [`Total Pfam domain count in your sequence (currently ${n})`, imp + ecCtx, corr]
+           .filter(Boolean).join(' · ')
+  }
+  // Dipeptide composition
+  if (name.startsWith('dp_') && name.length === 5) {
+    const aa = name.slice(3)
+    return [`Frequency of ${aa[0]}-${aa[1]} dipeptide in your sequence`,
+            imp + ecCtx, direction ? `Direction: ${direction}` : null, corr]
+           .filter(Boolean).join(' · ')
+  }
+  // Pseudo-AAC
+  if (name.startsWith('pse_')) {
+    return [`Pseudo amino-acid composition feature (${name})`, imp + ecCtx, corr]
+           .filter(Boolean).join(' · ')
+  }
+  // Plain AAC
+  if (name.startsWith('aac_')) {
+    return [`Amino-acid composition: frequency of ${name.slice(-1)}`, imp + ecCtx, corr]
+           .filter(Boolean).join(' · ')
+  }
+  // ESM-2 embedding dimension
+  if (name.startsWith('esm2_')) {
+    const dim = name.replace('esm2_', '')
+    return [`ESM-2 embedding dim ${dim}: protein language model axis, no direct biological meaning`,
+            imp + ecCtx,
+            direction ? `Training showed this axis correlates with ${direction}` : null]
+           .filter(Boolean).join(' · ')
+  }
+  // Motif (regex)
+  if (name.startsWith('motif_')) {
+    const meta = MOTIF_META[name]
+    const desc = meta ? `${meta.label} — ${meta.description}` : `Motif ${name}`
+    return [desc, imp + ecCtx, corr].filter(Boolean).join(' · ')
+  }
+  // Catalytic-core inv_cat_*
+  if (name.startsWith('inv_cat_')) {
+    const what = name === 'inv_cat_mean_dist' ? 'mean spacing between catalytic-core residues'
+               : name === 'inv_cat_max_dist'  ? 'max spacing between catalytic-core residues'
+               : name === 'inv_cat_min_dist'  ? 'min spacing between catalytic-core residues'
+               : name === 'inv_cat_clustering' ? 'fraction of catalytic-core residues clustered'
+               : `density of ${name.replace('inv_cat_', '')} residues`
+    return [`Catalytic-core feature: ${what}`, imp + ecCtx, corr].filter(Boolean).join(' · ')
+  }
+  // Other inv_* (hydrophobic, charged, etc.)
+  if (name.startsWith('inv_')) {
+    return [`Sequence feature: ${name.replace('inv_', '').replace(/_/g, ' ')}`,
+            imp + ecCtx, corr].filter(Boolean).join(' · ')
+  }
+  // Physicochemical
+  if (name.startsWith('phys_')) {
+    const what = name === 'phys_mw' ? 'molecular weight'
+               : name === 'phys_pi' ? 'isoelectric point'
+               : name === 'phys_gravy' ? 'GRAVY hydropathy index'
+               : name === 'phys_instability' ? 'instability index'
+               : name === 'phys_aromaticity' ? 'aromaticity'
+               : name === 'phys_charge_ph7' ? 'net charge at pH 7'
+               : name.replace('phys_', '').replace(/_/g, ' ')
+    return [`Physicochemical: ${what}`, imp + ecCtx, corr].filter(Boolean).join(' · ')
+  }
+  // InterPro counts
+  if (name.startsWith('n_')) {
+    const db = name === 'n_panther' ? 'PANTHER family'
+             : name === 'n_gene3d' ? 'Gene3D structural'
+             : name === 'n_tigrfam' ? 'TIGRFAM'
+             : name === 'n_prosite_prof' ? 'ProSite profile'
+             : name === 'n_prosite_pat' ? 'ProSite pattern'
+             : name.replace('n_', '')
+    return [`${db} annotation count from InterProScan`, imp + ecCtx, corr]
+           .filter(Boolean).join(' · ')
+  }
+  // EC one-hot
+  if (name.startsWith('ec_oh_')) {
+    return [`EC one-hot encoding for ${name.replace('ec_oh_', '')}`, imp].filter(Boolean).join(' · ')
+  }
+  // Kingdom one-hot
+  if (name.startsWith('kingdom_')) {
+    return [`Kingdom one-hot: ${name.replace('kingdom_', '')}`, imp].filter(Boolean).join(' · ')
+  }
+  // Default fallback
+  return [name, grp, imp].filter(Boolean).join(' · ')
+}
 
 // ─── SHAP "Your sequence" column helpers ─────────────────────────────────
 function matchStatus(feat) {
@@ -827,6 +983,7 @@ const matchSummary = computed(() => {
 .rd-shap-feat {
   display: grid; grid-template-columns: 24px 1fr 1.5fr 60px; gap: 10px;
   align-items: center; padding: 6px 0; font-size: 13px;
+  cursor: help;
 }
 .rd-shap-rank {
   font-family: 'Monaco', monospace; color: #a0aec0;
@@ -946,6 +1103,24 @@ const matchSummary = computed(() => {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   padding: 10px 14px; background: #fafbfc;
   border-radius: 6px; border: 1px solid #edf2f7;
+}
+
+.rd-km-compare-headline {
+  background: linear-gradient(135deg, #f0f9ff 0%, #ecfdf5 100%);
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 1.05em;
+}
+
+.rd-km-headline .rd-section-title {
+  margin-bottom: 8px;
+}
+
+.rd-km-sub {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 4px;
 }
 .rd-km-box { flex: 1; min-width: 120px; }
 .rd-km-label {

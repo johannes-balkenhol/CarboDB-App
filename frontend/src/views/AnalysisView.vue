@@ -97,9 +97,9 @@ MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
               <th>Consensus</th>
               <th>EC Predicted</th>
               <th>EC Conf</th>
-              <th>Km (µM)</th>
-              <th>Nearest Match</th>
-              <th>Experimental Km</th>
+              <th>Predicted Km (µM)</th>
+              <th>Nearest BLAST hit</th>
+              <th>Experimental Km (closest hit)</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -235,7 +235,10 @@ async function predictSingle() {
         co2_prob_v3: data.carboxylase_probability,
         co2_prob_v5: data.carboxylase_probability,
         consensus: data.is_carboxylase,
-        nearest_neighbor: data.top_similar?.[0] || null,
+        nearest_neighbor: data.top_similar?.[0] ? {
+          ...data.top_similar[0],
+          km_experimental: data.top_similar[0].km_experimental_uM,  // alias for batch-table cell
+        } : null,
         similar_with_km: data.top_similar || [],
       }
       batchResults.value = [result]
@@ -464,7 +467,10 @@ async function viewDetail(result) {
         co2_prob_v3: data.carboxylase_probability,
         co2_prob_v5: data.carboxylase_probability,
         consensus: data.is_carboxylase,
-        nearest_neighbor: data.top_similar?.[0] || null
+        nearest_neighbor: data.top_similar?.[0] ? {
+          ...data.top_similar[0],
+          km_experimental: data.top_similar[0].km_experimental_uM,
+        } : null,
       }
     }
   } catch (e) {
