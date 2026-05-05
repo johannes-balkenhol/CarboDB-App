@@ -1,578 +1,540 @@
 <template>
   <div class="database-view">
-    <!-- Stats Header -->
-    <div class="stats-header" v-if="stats">
+    <!-- ═══ Stats banner ═══════════════════════════════════════════════════ -->
+    <div v-if="stats" class="stats-banner">
       <div class="stat-card">
-        <span class="stat-icon">🧬</span>
-        <div class="stat-content">
-          <span class="stat-value">{{ stats.co2_enzymes?.toLocaleString() }}</span>
-          <span class="stat-label">CO₂ Enzymes</span>
-        </div>
+        <div class="stat-value">{{ stats.total_sequences.toLocaleString() }}</div>
+        <div class="stat-label">Total sequences</div>
       </div>
-      <div class="stat-card">
-        <span class="stat-icon">✓</span>
-        <div class="stat-content">
-          <span class="stat-value">{{ stats.with_verified_ec?.toLocaleString() }}</span>
-          <span class="stat-label">Verified EC</span>
-        </div>
+      <div class="stat-card stat-card-primary">
+        <div class="stat-value">{{ stats.predicted_carboxylases.toLocaleString() }}</div>
+        <div class="stat-label">Predicted carboxylases</div>
+      </div>
+      <div class="stat-card stat-card-accent">
+        <div class="stat-value">{{ stats.with_experimental_km.toLocaleString() }}</div>
+        <div class="stat-label">With experimental Km</div>
       </div>
       <div class="stat-card">
-        <span class="stat-icon">🎯</span>
-        <div class="stat-content">
-          <span class="stat-value">{{ stats.with_features?.toLocaleString() }}</span>
-          <span class="stat-label">With Features</span>
-        </div>
+        <div class="stat-value">{{ stats.ec_classes_total }}</div>
+        <div class="stat-label">EC classes</div>
       </div>
       <div class="stat-card">
-        <span class="stat-icon">📊</span>
-        <div class="stat-content">
-          <span class="stat-value">{{ stats.with_experimental_km }}</span>
-          <span class="stat-label">Experimental Km</span>
-        </div>
+        <div class="stat-value">{{ stats.reviewed_count.toLocaleString() }}</div>
+        <div class="stat-label">SwissProt-curated</div>
       </div>
     </div>
 
-    <!-- Search Section -->
-    <div class="search-section">
-      <h2>🔍 Search Carboxylase Database</h2>
-      <div class="search-filters">
-        <div class="filter-row">
-          <input 
-            v-model="filters.query" 
-            type="text" 
-            placeholder="Search by UniProt ID or organism..."
-            class="search-input"
-            @keyup.enter="search"
-          />
-          <select v-model="filters.ec_class" class="filter-select">
-            <option value="">All EC Classes</option>
-            <option v-for="ec in ecClasses" :key="ec.ec_number" :value="ec.ec_number">
-              {{ ec.ec_number }} - {{ ec.ec_name }} ({{ ec.sequence_count }})
-            </option>
-          </select>
-        </div>
-        <div class="filter-row">
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="filters.is_co2" />
-            CO₂ enzymes only
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="filters.verified_only" />
-            Verified EC only
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="filters.has_km" />
-            Has Km data
-          </label>
-          <button @click="search" class="search-btn">Search</button>
-          <button @click="resetFilters" class="reset-btn">Reset</button>
-        </div>
-      </div>
+    <!-- ═══ Quick-pick example queries ═════════════════════════════════════ -->
+    <div class="quick-picks">
+      <span class="quick-picks-label">Try:</span>
+      <button class="qp-btn" @click="applyExample('rubisco')">RuBisCO (4.1.1.39)</button>
+      <button class="qp-btn" @click="applyExample('ca')">Carbonic anhydrases (4.2.1.1)</button>
+      <button class="qp-btn" @click="applyExample('pepc')">PEPCases (4.1.1.31)</button>
+      <button class="qp-btn" @click="applyExample('with_km')">With experimental Km</button>
+      <button class="qp-btn" @click="applyExample('reviewed')">SwissProt only</button>
+      <button class="qp-btn" @click="applyExample('low_km')">Low Km (&lt;10 µM)</button>
     </div>
 
-    <!-- Results Table -->
-    <div class="results-section" v-if="results.length > 0">
-      <h3>Results ({{ results.length }} sequences)</h3>
-      <div class="table-container">
-        <table class="results-table">
-          <thead>
-            <tr>
-              <th>UniProt ID</th>
-              <th>Length</th>
-              <th>Organism</th>
-              <th>v3 Prob</th>
-              <th>v5 Prob</th>
-              <th>EC (Best)</th>
-              <th>EC (Predicted)</th>
-              <th>Km (Best)</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="seq in results" :key="seq.uniprot_id" 
-                :class="{ 'consensus-positive': seq.is_co2_enzyme }">
-              <td class="uniprot-id">
-                <a :href="'https://www.uniprot.org/uniprotkb/' + seq.uniprot_id" target="_blank">
-                  {{ seq.uniprot_id }}
-                </a>
-              </td>
-              <td>{{ seq.length }}</td>
-              <td class="organism">{{ seq.organism || '-' }}</td>
-              <td :class="getProbClass(seq.co2_prob_v3)">
-                {{ seq.co2_prob_v3 ? (seq.co2_prob_v3 * 100).toFixed(1) + '%' : '-' }}
-              </td>
-              <td :class="getProbClass(seq.co2_prob_v5)">
-                {{ seq.co2_prob_v5 ? (seq.co2_prob_v5 * 100).toFixed(1) + '%' : '-' }}
-              </td>
-              <td class="ec-verified">{{ seq.ec_verified || seq.ec_verified || '-' }}</td>
-              <td class="ec-predicted">{{ seq.ec_predicted || '-' }}</td>
-              <td class="km-value">
-                {{ seq.km_experimental ? seq.km_experimental.toFixed(1) + ' µM' : (seq.km_predicted ? seq.km_predicted.toFixed(1) + ' µM' : '-') }}
-              </td>
-              <td>
-                <button @click="viewDetails(seq.id)" class="view-btn">View</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <!-- ═══ Search + filters ═══════════════════════════════════════════════ -->
+    <div class="search-bar">
+      <input
+        v-model="filters.q"
+        type="text"
+        placeholder="Search by UniProt ID or organism (e.g. P00918, Homo sapiens, spinach)"
+        class="search-input"
+        @keyup.enter="search(0)"
+      />
+      <select v-model="filters.ec" class="filter-select" @change="search(0)">
+        <option value="">All EC classes</option>
+        <option v-for="ec in ecOptions" :key="ec.ec_number" :value="ec.ec_number">
+          {{ ec.ec_number }} — {{ ec.ec_name }} ({{ ec.count.toLocaleString() }})
+        </option>
+      </select>
+      <button class="search-btn" @click="search(0)">Search</button>
+      <button class="reset-btn" @click="resetFilters">Reset</button>
+    </div>
+    <div class="filter-row">
+      <label class="checkbox-label">
+        <input type="checkbox" v-model="filters.has_experimental_km" @change="search(0)"/>
+        Has experimental Km
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" v-model="filters.reviewed" @change="search(0)"/>
+        SwissProt-curated only
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" v-model="filters.is_carboxylase" @change="search(0)"/>
+        Predicted carboxylase
+      </label>
+      <span class="result-summary" v-if="totalResults > 0">
+        {{ totalResults.toLocaleString() }} matches
+        <span class="page-info">
+          (showing {{ offset + 1 }}–{{ Math.min(offset + results.length, totalResults) }})
+        </span>
+      </span>
     </div>
 
-    <!-- EC Distribution Charts -->
-    <div class="charts-section" v-if="stats && stats.ec_distribution">
-      <div class="chart-card">
-        <h3>🔬 Top EC Classes</h3>
-        <div class="ec-bars">
-          <div v-for="ec in stats.ec_distribution.slice(0, 8)" :key="ec.ec_number" class="ec-bar-row">
-            <span class="ec-label">{{ ec.ec_number }}</span>
-            <div class="ec-bar-container">
-              <div class="ec-bar" :style="{ width: getBarWidth(ec.count, stats.ec_distribution) }"></div>
-            </div>
-            <span class="ec-count">{{ ec.count }}</span>
-          </div>
-        </div>
-      </div>
+    <!-- ═══ Results table ══════════════════════════════════════════════════ -->
+    <div v-if="loading" class="loading">Loading…</div>
+
+    <div v-else-if="results.length === 0 && hasSearched" class="empty">
+      No sequences match your search. Try broadening the filters or hit Reset.
     </div>
 
-    <!-- Sequence Detail Modal -->
-    <div class="modal-overlay" v-if="selectedSequence" @click.self="selectedSequence = null">
-      <div class="modal-content">
-        <button class="modal-close" @click="selectedSequence = null">×</button>
-        <h2>{{ selectedSequence.uniprot_id }}</h2>
-        
-        <div class="detail-grid">
-          <div class="detail-section">
-            <h3>📋 Basic Info</h3>
-            <div class="detail-row"><span>Length:</span> {{ selectedSequence.length }} aa</div>
-            <div class="detail-row"><span>Organism:</span> {{ selectedSequence.organism || 'Unknown' }}</div>
-            <div class="detail-row"><span>Consensus CO₂:</span> 
-              <span :class="selectedSequence.is_consensus_positive ? 'badge-yes' : 'badge-no'">
-                {{ selectedSequence.is_consensus_positive ? 'Yes' : 'No' }}
-              </span>
-            </div>
-          </div>
-          
-          <div class="detail-section">
-            <h3>🎯 ML Predictions</h3>
-            <div class="detail-row"><span>v3 Probability:</span> 
-              <span :class="getProbClass(selectedSequence.v3_prob)">
-                {{ selectedSequence.v3_prob ? (selectedSequence.v3_prob * 100).toFixed(2) + '%' : '-' }}
-              </span>
-            </div>
-            <div class="detail-row"><span>v5 Probability:</span> 
-              <span :class="getProbClass(selectedSequence.v5_prob)">
-                {{ selectedSequence.v5_prob ? (selectedSequence.v5_prob * 100).toFixed(2) + '%' : '-' }}
-              </span>
-            </div>
-          </div>
-          
-          <div class="detail-section">
-            <h3>🧪 EC Classification</h3>
-            <div class="detail-row"><span>Best EC:</span> {{ selectedSequence.ec_best || '-' }}</div>
-            <div class="detail-row"><span>Source:</span> {{ selectedSequence.ec_best_source || '-' }}</div>
-            <div class="detail-row"><span>Predicted:</span> {{ selectedSequence.ec_predicted || '-' }}</div>
-          </div>
-          
-          <div class="detail-section">
-            <h3>📊 Km Values</h3>
-            <div class="detail-row"><span>Best Km:</span> {{ selectedSequence.km_best ? selectedSequence.km_best.toFixed(2) + ' µM' : '-' }}</div>
-            <div class="detail-row"><span>Experimental:</span> {{ selectedSequence.km_experimental ? selectedSequence.km_experimental.toFixed(2) + ' µM' : '-' }}</div>
-            <div class="detail-row"><span>Predicted:</span> {{ selectedSequence.km_predicted ? selectedSequence.km_predicted.toFixed(2) + ' µM' : '-' }}</div>
-          </div>
-        </div>
-        
-        <div class="modal-actions">
-          <button @click="viewFeatures(selectedSequence.id)" class="action-btn">
-            View Features (447)
-          </button>
-          <a :href="'https://www.uniprot.org/uniprotkb/' + selectedSequence.uniprot_id" 
-             target="_blank" class="action-btn external">
-            UniProt ↗
-          </a>
-        </div>
-      </div>
+    <div v-else-if="results.length > 0" class="table-wrap">
+      <table class="db-table">
+        <thead>
+          <tr>
+            <th @click="setSort('uniprot')" :class="{ active: filters.sort === 'uniprot' }">
+              UniProt ID
+            </th>
+            <th>Organism</th>
+            <th>EC</th>
+            <th @click="setSort('length')" :class="{ active: sortIs('length') }">
+              Length {{ sortArrow('length') }}
+            </th>
+            <th @click="setSort('km_pred')" :class="{ active: sortIs('km_pred') }">
+              Predicted Km (µM) {{ sortArrow('km_pred') }}
+            </th>
+            <th>Experimental Km (µM)</th>
+            <th>Source</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="r in results" :key="r.uniprot_id" @click="openDetail(r)" class="row-clickable">
+            <td class="uniprot rd-mono">
+              <a :href="'https://www.uniprot.org/uniprotkb/' + r.uniprot_id"
+                 target="_blank" @click.stop>{{ r.uniprot_id }}</a>
+              <span v-if="r.reviewed" class="reviewed-dot" title="SwissProt curated">✓</span>
+            </td>
+            <td class="organism">{{ r.organism || '—' }}</td>
+            <td class="ec">
+              <span class="ec-tag">{{ r.ec_predicted || r.ec_known || '—' }}</span>
+              <span v-if="r.ec_name" class="ec-name">{{ r.ec_name }}</span>
+            </td>
+            <td>{{ r.length }}</td>
+            <td class="km-pred">
+              <span v-if="r.km_predicted_uM != null">{{ r.km_predicted_uM.toFixed(1) }}</span>
+              <span v-else class="muted">—</span>
+            </td>
+            <td class="km-exp">
+              <span v-if="r.km_experimental_uM != null">{{ r.km_experimental_uM.toFixed(1) }}</span>
+              <span v-else class="muted">—</span>
+            </td>
+            <td class="source">
+              <span class="source-tag" :class="'source-' + r.source">{{ r.source }}</span>
+            </td>
+            <td>
+              <button class="detail-btn" @click.stop="openDetail(r)">Details</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
-    <!-- Features Modal -->
-    <div class="modal-overlay" v-if="showFeatures" @click.self="showFeatures = false">
-      <div class="modal-content wide">
-        <button class="modal-close" @click="showFeatures = false">×</button>
-        <h2>Features (447)</h2>
-        
-        <div class="features-grid" v-if="features">
-          <div class="feature-category">
-            <h3>Invariant Features</h3>
-            <div class="feature-list">
-              <div v-for="(val, key) in getFeaturesByPrefix('inv_')" :key="key" class="feature-item">
-                <span class="feature-name">{{ key }}</span>
-                <span class="feature-value">{{ val.toFixed(4) }}</span>
-              </div>
-            </div>
-          </div>
-          <div class="feature-category">
-            <h3>Amino Acid Composition</h3>
-            <div class="feature-list">
-              <div v-for="(val, key) in getFeaturesByPrefix('aa_')" :key="key" class="feature-item">
-                <span class="feature-name">{{ key.replace('aa_', '') }}</span>
-                <span class="feature-value">{{ (val * 100).toFixed(2) }}%</span>
-              </div>
-            </div>
-          </div>
-          <div class="feature-category">
-            <h3>Motifs</h3>
-            <div class="feature-list">
-              <div v-for="(val, key) in getFeaturesByPrefix('motif_')" :key="key" class="feature-item">
-                <span class="feature-name">{{ key.replace('motif_', '') }}</span>
-                <span class="feature-value">{{ val.toFixed(4) }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <!-- ═══ Pagination ═════════════════════════════════════════════════════ -->
+    <div class="pagination" v-if="totalResults > limit">
+      <button @click="search(offset - limit)" :disabled="offset === 0">‹ Prev</button>
+      <span>Page {{ Math.floor(offset / limit) + 1 }} / {{ Math.ceil(totalResults / limit) }}</span>
+      <button @click="search(offset + limit)" :disabled="offset + limit >= totalResults">Next ›</button>
     </div>
 
-    <!-- Loading -->
-    <div class="loading" v-if="loading">Loading...</div>
+    <!-- ═══ Detail modal — reuses ResultDetail component ═══════════════════ -->
+    <div v-if="selectedDetail" class="detail-modal-overlay" @click.self="selectedDetail = null">
+      <div class="detail-modal">
+        <button class="detail-close" @click="selectedDetail = null">×</button>
+        <ResultDetail :result="selectedDetail" />
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import ResultDetail from '../components/ResultDetail.vue'
 
-const API_URL = ''
+const API_URL = import.meta.env.VITE_API_URL || ''
 
+// ─── reactive state ──────────────────────────────────────────────────────
 const stats = ref(null)
-const ecClasses = ref([])
 const results = ref([])
+const totalResults = ref(0)
+const offset = ref(0)
+const limit = 50
 const loading = ref(false)
-const selectedSequence = ref(null)
-const showFeatures = ref(false)
-const features = ref(null)
+const hasSearched = ref(false)
+const selectedDetail = ref(null)
 
-const filters = ref({
-  query: '',
-  ec_class: '',
-  is_co2: true,
-  verified_only: false,
-  has_km: false
+const filters = reactive({
+  q: '',
+  ec: '',
+  has_experimental_km: false,
+  reviewed: false,
+  is_carboxylase: true,   // default-on; most users want positives
+  sort: 'default',
 })
 
-async function loadStats() {
+const ecOptions = computed(() => stats.value?.ec_distribution || [])
+
+// ─── lifecycle ───────────────────────────────────────────────────────────
+onMounted(async () => {
+  await fetchStats()
+  await search(0)   // populate the table immediately on first visit
+})
+
+// ─── fetchers ────────────────────────────────────────────────────────────
+async function fetchStats() {
   try {
     const res = await fetch(`${API_URL}/api/v1/stats`)
-    const data = await res.json()
-    if (data.success) {
-      stats.value = data.stats
-    }
-  } catch (err) {
-    console.error('Failed to load stats:', err)
+    if (res.ok) stats.value = await res.json()
+  } catch (e) {
+    console.error('stats fetch failed', e)
   }
 }
 
-async function loadEcClasses() {
-  try {
-    const res = await fetch(`${API_URL}/api/v1/stats`)
-    const data = await res.json()
-    if (data.success) {
-      ecClasses.value = data.ec_classes
-    }
-  } catch (err) {
-    console.error('Failed to load EC classes:', err)
-  }
-}
-
-async function search() {
+async function search(newOffset) {
   loading.value = true
+  hasSearched.value = true
+  offset.value = Math.max(0, newOffset)
+
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset.value) })
+  if (filters.q) params.set('q', filters.q)
+  if (filters.ec) params.set('ec', filters.ec)
+  if (filters.has_experimental_km) params.set('has_experimental_km', 'true')
+  if (filters.reviewed) params.set('reviewed', 'true')
+  if (filters.is_carboxylase) params.set('is_carboxylase', 'true')
+  if (filters.sort !== 'default') params.set('sort', filters.sort)
+
   try {
-    const params = new URLSearchParams()
-    if (filters.value.query) params.append('query', filters.value.query)
-    if (filters.value.ec_class) params.append('ec_class', filters.value.ec_class)
-    if (filters.value.is_co2) params.append('is_co2', 'true')
-    if (filters.value.verified_only) params.append('verified_only', 'true')
-    if (filters.value.has_km) params.append('has_km', 'true')
-    params.append('limit', '100')
-    
     const res = await fetch(`${API_URL}/api/v1/browse?${params}`)
     const data = await res.json()
-    if (data.success) {
-      results.value = data.results
-    }
-  } catch (err) {
-    console.error('Search failed:', err)
+    results.value = data.results || []
+    totalResults.value = data.total || 0
+  } catch (e) {
+    console.error('browse failed', e)
+    results.value = []
+    totalResults.value = 0
+  } finally {
+    loading.value = false
   }
-  loading.value = false
 }
 
-async function viewDetails(seqId) {
+// ─── interaction ─────────────────────────────────────────────────────────
+async function openDetail(row) {
+  selectedDetail.value = { ...row, _loading: true }
   try {
-    const res = await fetch(`${API_URL}/db/sequence/${seqId}`)
-    const data = await res.json()
-    if (data.success) {
-      selectedSequence.value = data.sequence
+    const res = await fetch(`${API_URL}/api/v1/db/seq/${row.uniprot_id}`)
+    if (res.ok) {
+      selectedDetail.value = await res.json()
+    } else {
+      // Fall back: keep the row data so the modal at least shows the basics
+      selectedDetail.value = {
+        ...row,
+        id: row.uniprot_id,
+        sequence_length: row.length,
+      }
     }
-  } catch (err) {
-    console.error('Failed to load sequence:', err)
-  }
-}
-
-async function viewFeatures(seqId) {
-  try {
-    const res = await fetch(`${API_URL}/db/sequence/${seqId}/features`)
-    const data = await res.json()
-    if (data.success) {
-      features.value = data.features
-      showFeatures.value = true
+  } catch (e) {
+    selectedDetail.value = {
+      ...row,
+      id: row.uniprot_id,
+      sequence_length: row.length,
     }
-  } catch (err) {
-    console.error('Failed to load features:', err)
   }
 }
 
-function getFeaturesByPrefix(prefix) {
-  if (!features.value) return {}
-  return Object.fromEntries(
-    Object.entries(features.value).filter(([k]) => k.startsWith(prefix))
-  )
+function applyExample(kind) {
+  resetFilters({ keepDefaults: true })
+  if (kind === 'rubisco')   { filters.ec = '4.1.1.39' }
+  if (kind === 'ca')        { filters.ec = '4.2.1.1' }
+  if (kind === 'pepc')      { filters.ec = '4.1.1.31' }
+  if (kind === 'with_km')   { filters.has_experimental_km = true }
+  if (kind === 'reviewed')  { filters.reviewed = true }
+  if (kind === 'low_km')    { filters.sort = 'km_asc'; filters.has_experimental_km = true }
+  search(0)
 }
 
-function resetFilters() {
-  filters.value = {
-    query: '',
-    ec_class: '',
-    is_co2: true,
-    verified_only: false,
-    has_km: false
+function resetFilters(opts = {}) {
+  filters.q = ''
+  filters.ec = ''
+  filters.has_experimental_km = false
+  filters.reviewed = false
+  filters.is_carboxylase = true
+  filters.sort = 'default'
+  if (!opts.keepDefaults) search(0)
+}
+
+// ─── sort helpers ────────────────────────────────────────────────────────
+function setSort(col) {
+  if (col === 'uniprot') {
+    filters.sort = 'uniprot'
+  } else if (col === 'length') {
+    filters.sort = filters.sort === 'length_asc' ? 'length_desc' : 'length_asc'
+  } else if (col === 'km_pred') {
+    filters.sort = filters.sort === 'km_asc' ? 'km_desc' : 'km_asc'
   }
-  results.value = []
+  search(0)
 }
-
-function getProbClass(prob) {
-  if (!prob) return ''
-  if (prob >= 0.9) return 'prob-high'
-  if (prob >= 0.5) return 'prob-medium'
-  return 'prob-low'
+function sortIs(col) {
+  if (col === 'length') return filters.sort.startsWith('length')
+  if (col === 'km_pred') return filters.sort.startsWith('km_')
+  return filters.sort === col
 }
-
-function getBarWidth(count, distribution) {
-  const max = Math.max(...distribution.map(d => d.count))
-  return `${(count / max) * 100}%`
+function sortArrow(col) {
+  if (col === 'length') return filters.sort === 'length_asc' ? '↑' : filters.sort === 'length_desc' ? '↓' : ''
+  if (col === 'km_pred') return filters.sort === 'km_asc' ? '↑' : filters.sort === 'km_desc' ? '↓' : ''
+  return ''
 }
-
-onMounted(() => {
-  loadStats()
-  loadEcClasses()
-  search()
-})
 </script>
 
 <style scoped>
 .database-view {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 24px 16px;
 }
 
-.stats-header {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 30px;
-  flex-wrap: wrap;
+/* ═══ Stats banner ═══════════════════════════════════════════════════════ */
+.stats-banner {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
 }
-
 .stat-card {
-  flex: 1;
-  min-width: 150px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-  padding: 20px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.stat-card-primary { border-color: #4f46e5; background: linear-gradient(135deg, #fff 60%, #eef2ff); }
+.stat-card-accent  { border-color: #10b981; background: linear-gradient(135deg, #fff 60%, #ecfdf5); }
+.stat-value {
+  font-size: 22px;
+  font-weight: 600;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+.stat-card-primary .stat-value { color: #4f46e5; }
+.stat-card-accent  .stat-value { color: #047857; }
+.stat-label {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+}
+
+/* ═══ Quick-picks ════════════════════════════════════════════════════════ */
+.quick-picks {
   display: flex;
   align-items: center;
-  gap: 15px;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.quick-picks-label {
+  font-size: 13px;
+  color: #475569;
+  margin-right: 4px;
+}
+.qp-btn {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 120ms;
+}
+.qp-btn:hover {
+  background: #e0e7ff;
+  border-color: #818cf8;
+  color: #3730a3;
+}
+
+/* ═══ Search bar ═════════════════════════════════════════════════════════ */
+.search-bar {
+  display: grid;
+  grid-template-columns: 2fr 1fr auto auto;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.search-input, .filter-select {
+  padding: 9px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+}
+.search-input:focus, .filter-select:focus {
+  outline: 2px solid #818cf8;
+  outline-offset: -1px;
+  border-color: #4f46e5;
+}
+.search-btn, .reset-btn {
+  padding: 9px 18px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.search-btn {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
   color: white;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
+.search-btn:hover { background: linear-gradient(135deg, #4f46e5, #4338ca); }
+.reset-btn { background: #e2e8f0; color: #475569; }
+.reset-btn:hover { background: #cbd5e1; }
 
-.stat-icon { font-size: 28px; }
-.stat-content { display: flex; flex-direction: column; }
-.stat-value { font-size: 24px; font-weight: 700; }
-.stat-label { font-size: 12px; opacity: 0.9; }
-
-.search-section {
-  background: white;
-  border-radius: 12px;
-  padding: 25px;
-  margin-bottom: 25px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+.filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
 }
-
-.search-section h2 { margin: 0 0 20px 0; color: #2d3748; }
-
-.search-filters { display: flex; flex-direction: column; gap: 15px; }
-.filter-row { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
-
-.search-input {
-  flex: 2;
-  padding: 12px 16px;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 14px;
-  min-width: 250px;
-}
-
-.search-input:focus { border-color: #667eea; outline: none; }
-
-.filter-select {
-  flex: 1;
-  padding: 12px 16px;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 14px;
-  min-width: 200px;
-}
-
 .checkbox-label {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
-  color: #4a5568;
+  color: #475569;
   cursor: pointer;
 }
-
-.search-btn {
-  padding: 12px 24px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
+.result-summary {
+  margin-left: auto;
+  color: #475569;
 }
+.page-info { color: #94a3b8; font-size: 12px; }
 
-.reset-btn {
-  padding: 12px 20px;
-  background: #e2e8f0;
-  color: #4a5568;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
+/* ═══ Table ══════════════════════════════════════════════════════════════ */
+.loading, .empty {
+  text-align: center;
+  padding: 60px 0;
+  color: #64748b;
 }
-
-.results-section {
+.table-wrap {
   background: white;
-  border-radius: 12px;
-  padding: 25px;
-  margin-bottom: 25px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
 }
-
-.table-container { overflow-x: auto; }
-
-.results-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.results-table th {
-  background: #f7fafc;
-  padding: 12px 10px;
+.db-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.db-table thead th {
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 12px;
   text-align: left;
   font-weight: 600;
-  color: #4a5568;
-  border-bottom: 2px solid #e2e8f0;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
 }
-.results-table td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
-.results-table tr:hover { background: #f7fafc; }
-.results-table tr.consensus-positive { background: rgba(72, 187, 120, 0.05); }
-
-.uniprot-id a { color: #667eea; text-decoration: none; font-weight: 600; }
-.organism { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.prob-high { color: #38a169; font-weight: 600; }
-.prob-medium { color: #d69e2e; }
-.prob-low { color: #e53e3e; }
-
-.view-btn {
-  padding: 6px 12px;
-  background: #667eea;
-  color: white;
-  border: none;
+.db-table thead th:hover { background: #eef2ff; }
+.db-table thead th.active { color: #4f46e5; }
+.db-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.row-clickable { cursor: pointer; transition: background 100ms; }
+.row-clickable:hover { background: #f8fafc; }
+.uniprot a { color: #4f46e5; text-decoration: none; font-weight: 500; }
+.uniprot a:hover { text-decoration: underline; }
+.reviewed-dot { color: #10b981; margin-left: 4px; font-weight: 700; }
+.organism { color: #475569; font-style: italic; max-width: 220px;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ec-tag {
+  background: #eef2ff;
+  color: #4338ca;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 12px;
+  margin-right: 6px;
+}
+.ec-name { color: #64748b; font-size: 12px; }
+.muted { color: #cbd5e1; }
+.km-pred, .km-exp { font-variant-numeric: tabular-nums; }
+.km-exp { color: #047857; font-weight: 500; }
+.source-tag {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: #f1f5f9;
+  color: #64748b;
+  text-transform: lowercase;
+}
+.source-tag.source-swissprot { background: #fef3c7; color: #92400e; }
+.source-tag.source-brenda { background: #dbeafe; color: #1e40af; }
+.detail-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
   border-radius: 6px;
+  padding: 4px 10px;
   font-size: 12px;
   cursor: pointer;
+  color: #334155;
 }
+.detail-btn:hover { background: #4f46e5; color: white; border-color: #4f46e5; }
+.rd-mono { font-family: ui-monospace, SFMono-Regular, monospace; }
 
-.charts-section { margin-bottom: 25px; }
-.chart-card {
+/* ═══ Pagination ═════════════════════════════════════════════════════════ */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+  font-size: 13px;
+  color: #475569;
+}
+.pagination button {
+  padding: 6px 14px;
+  border: 1px solid #cbd5e1;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+.pagination button:hover:not(:disabled) { background: #eef2ff; border-color: #818cf8; }
+
+/* ═══ Detail modal ═══════════════════════════════════════════════════════ */
+.detail-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex; align-items: flex-start; justify-content: center;
+  z-index: 1000;
+  padding: 32px 16px;
+  overflow-y: auto;
+}
+.detail-modal {
   background: white;
   border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-
-.ec-bars { display: flex; flex-direction: column; gap: 8px; }
-.ec-bar-row { display: flex; align-items: center; gap: 10px; }
-.ec-label { width: 80px; font-size: 12px; font-weight: 600; color: #4a5568; }
-.ec-bar-container { flex: 1; height: 20px; background: #e2e8f0; border-radius: 10px; overflow: hidden; }
-.ec-bar { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 10px; }
-.ec-count { width: 50px; text-align: right; font-size: 12px; color: #718096; }
-
-.modal-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 16px;
-  padding: 30px;
-  max-width: 800px;
-  max-height: 90vh;
-  overflow-y: auto;
-  width: 90%;
+  max-width: 1200px; width: 100%;
   position: relative;
+  padding: 16px;
 }
-
-.modal-content.wide { max-width: 1000px; }
-
-.modal-close {
-  position: absolute; top: 15px; right: 15px;
-  width: 30px; height: 30px;
-  border: none; background: #e2e8f0;
-  border-radius: 50%; font-size: 20px; cursor: pointer;
-}
-
-.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-.detail-section { background: #f7fafc; border-radius: 10px; padding: 15px; }
-.detail-section h3 { margin: 0 0 10px 0; font-size: 14px; color: #4a5568; }
-.detail-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; }
-
-.badge-yes { background: #48bb78; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
-.badge-no { background: #e53e3e; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
-
-.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-.action-btn {
-  padding: 10px 20px;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
+.detail-close {
+  position: absolute;
+  right: 14px; top: 10px;
+  background: transparent; border: none;
+  font-size: 28px;
+  color: #64748b;
   cursor: pointer;
-  text-decoration: none;
+  z-index: 1;
 }
-.action-btn.external { background: #4a5568; }
+.detail-close:hover { color: #0f172a; }
 
-.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-.feature-category { background: #f7fafc; border-radius: 10px; padding: 15px; }
-.feature-list { max-height: 400px; overflow-y: auto; }
-.feature-item { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; border-bottom: 1px solid #e2e8f0; }
-.feature-name { color: #4a5568; font-family: monospace; }
-.feature-value { font-weight: 600; color: #2d3748; }
-
-.loading { text-align: center; padding: 40px; color: #718096; }
-
-@media (max-width: 768px) {
-  .stats-header { flex-direction: column; }
-  .detail-grid { grid-template-columns: 1fr; }
-  .features-grid { grid-template-columns: 1fr; }
+@media (max-width: 900px) {
+  .stats-banner { grid-template-columns: repeat(2, 1fr); }
+  .search-bar { grid-template-columns: 1fr; }
 }
 </style>
