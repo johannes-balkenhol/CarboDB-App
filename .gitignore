@@ -3,3 +3,4 @@ backend/carboxylase_search/prosite_scan/output/
 backend/uploaded_user_data/
 **/__pycache__/*.bak
 *.oldbak
+*.before_*
