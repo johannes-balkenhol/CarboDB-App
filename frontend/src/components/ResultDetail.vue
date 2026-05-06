@@ -339,11 +339,19 @@
         Novelty: <strong :class="'rd-novelty-' + result.novelty_flag">{{ result.novelty_flag }}</strong>
       </span>
     </footer>
+    <!-- Extended UniProt + AlphaFold annotation, lazy-loaded behind a button -->
+    <ExtendedDetails
+      v-if="result && result.uniprot_id"
+      :uniprot-id="result.uniprot_id"
+      :api-base="'/api/v1'"
+      :pfam-hits="result.pfam_hits || []"
+    />
   </div>
 </template>
 
 <script setup>
 import { computed, ref, watchEffect } from 'vue'
+import ExtendedDetails from './ExtendedDetails.vue'
 
 const props = defineProps({
   result:   { type: Object, required: true },
