@@ -341,8 +341,8 @@
     </footer>
     <!-- Extended UniProt + AlphaFold annotation, lazy-loaded behind a button -->
     <ExtendedDetails
-      v-if="result && result.uniprot_id"
-      :uniprot-id="result.uniprot_id"
+      v-if="result && result.mode === 'db_lookup' && (result.uniprot_id || result.id)"
+      :uniprot-id="result.uniprot_id || result.id"
       :api-base="'/api/v1'"
       :pfam-hits="result.pfam_hits || []"
     />
