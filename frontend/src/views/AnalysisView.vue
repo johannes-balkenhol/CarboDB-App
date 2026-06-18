@@ -63,11 +63,30 @@ MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
         </div>
 
         <button @click="analyze" :disabled="loading" class="predict-btn">
-          <span v-if="!loading">🔬 Analyze {{ detectedSeqCount >= 2 ? `${detectedSeqCount} sequences` : 'Sequence' }}</span>
+          <span v-if="!loading">
+            🔬 Analyze {{ detectedSeqCount >= 2 ? `${detectedSeqCount} sequences` : 'Sequence' }}
+          </span>
+
           <span v-else-if="batchProgress">
             Analyzing batch: {{ batchProgress.processed }}/{{ batchProgress.total }} ({{ batchProgress.progressPct || 0 }}%)
           </span>
-          <span v-else>Analyzing...</span>
+
+          <span v-else-if="predictStatus">
+            Prediction {{ predictStatus }}...
+          </span>
+
+          <span v-else>
+            Analyzing...
+          </span>
+        </button>
+
+        <button
+          v-if="loading && predictJobId"
+          type="button"
+          class="cancel-btn"
+          @click="cancelPrediction"
+        >
+          Cancel prediction
         </button>
       </div>
     </div>
@@ -171,6 +190,10 @@ const fastaInput = ref('')
 const loading = ref(false)
 const batchProgress = ref(null)
 const error = ref(null)
+const predictJobId = ref(null)
+const predictStatus = ref(null)
+const predictPollInterval = ref(null)
+const predictAbortController = ref(null)
 
 const selectedMode = ref('standard')
 const selectedKingdom = ref('plant')
@@ -197,61 +220,178 @@ function loadExample(key) {
   fastaInput.value = exampleSequences[key]
 }
 
+function clearPredictPoll() {
+  if (predictPollInterval.value) {
+    clearInterval(predictPollInterval.value)
+    predictPollInterval.value = null
+  }
+}
+
+async function cancelPrediction() {
+  const jobId = predictJobId.value
+
+  clearPredictPoll()
+
+  if (predictAbortController.value) {
+    predictAbortController.value.abort()
+    predictAbortController.value = null
+  }
+
+  if (jobId) {
+    try {
+      await fetch(`/api/v1/predict/${jobId}`, {
+        method: 'DELETE',
+      })
+    } catch (e) {
+      console.warn('Failed to cancel backend job:', e)
+    }
+  }
+
+  loading.value = false
+  predictStatus.value = 'cancelled'
+  error.value = 'Prediction cancelled.'
+}
+
 async function predictSingle() {
-  // Extract single sequence from fastaInput (works whether user pasted raw AA or FASTA).
-  // If input has a > header, strip the header line and join the rest.
   const raw = (fastaInput.value || '').trim()
+
   if (!raw) {
     error.value = 'Please enter a sequence'
     return
   }
+
   const seq = raw.startsWith('>')
     ? raw.split('\n').slice(1).join('').replace(/\s+/g, '')
     : raw.replace(/\s+/g, '')
 
   loading.value = true
   error.value = null
+  batchResults.value = []
+  selectedResult.value = null
+  predictJobId.value = null
+  predictStatus.value = 'submitting'
+  clearPredictPoll()
+
+  predictAbortController.value = new AbortController()
 
   try {
-    const res = await fetch('/api/v1/predict', {
+    const submitRes = await fetch('/api/v1/predict', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: predictAbortController.value.signal,
       body: JSON.stringify({
         sequence: seq,
         mode: selectedMode.value || 'standard',
-        kingdom: selectedKingdom.value || 'plant'
-      })
+        kingdom: selectedKingdom.value || 'plant',
+        seq_id: 'query',
+      }),
     })
 
-    const data = await res.json()
-
-    if (data.ec_predicted) {
-      // Keep all backend fields (features_computed, shap, warnings, etc.);
-      // add the aliases that the batch table still expects.
-      const result = {
-        ...data,
-        id: data.cdb_query_id || 'query',
-        length: data.sequence_length,
-        co2_prob_v3: data.carboxylase_probability,
-        co2_prob_v5: data.carboxylase_probability,
-        consensus: data.is_carboxylase,
-        nearest_neighbor: data.top_similar?.[0] ? {
-          ...data.top_similar[0],
-          km_experimental: data.top_similar[0].km_experimental_uM,  // alias for batch-table cell
-        } : null,
-        similar_with_km: data.top_similar || [],
-      }
-      batchResults.value = [result]
-      summary.value = { total: 1, consensus_positive: data.is_carboxylase ? 1 : 0, with_neighbor: data.top_similar?.length > 0 ? 1 : 0 }
-      selectedResult.value = result
-    } else {
-      error.value = data.detail || 'Prediction failed'
+    if (!submitRes.ok) {
+      const errText = await submitRes.text()
+      throw new Error(`Submit failed (HTTP ${submitRes.status}): ${errText}`)
     }
-  } catch (e) {
-    error.value = `Request failed: ${e.message}`
-  }
 
-  loading.value = false
+    const submitData = await submitRes.json()
+    const jobId = submitData.job_id
+
+    if (!jobId) {
+      throw new Error('Backend did not return a job_id')
+    }
+
+    predictJobId.value = jobId
+    predictStatus.value = submitData.status || 'queued'
+
+    predictPollInterval.value = setInterval(async () => {
+      try {
+        const pollRes = await fetch(`/api/v1/predict/${jobId}`, {
+          signal: predictAbortController.value?.signal,
+        })
+
+        if (!pollRes.ok) {
+          const errText = await pollRes.text()
+          throw new Error(`Polling failed (HTTP ${pollRes.status}): ${errText}`)
+        }
+
+        const pollData = await pollRes.json()
+        predictStatus.value = pollData.status
+
+        if (['queued', 'running', 'started', 'deferred', 'scheduled'].includes(pollData.status)) {
+          return
+        }
+
+        clearPredictPoll()
+        loading.value = false
+        predictAbortController.value = null
+
+        if (pollData.status === 'cancelled' || pollData.status === 'canceled') {
+          error.value = 'Prediction cancelled.'
+          return
+        }
+
+        if (pollData.status === 'failed') {
+          error.value =
+            pollData.error?.message ||
+            pollData.error?.detail ||
+            'Prediction failed'
+          return
+        }
+
+        if (pollData.status !== 'completed' || !pollData.result) {
+          error.value = 'Prediction finished without a result'
+          return
+        }
+
+        const data = pollData.result
+
+        const result = {
+          ...data,
+          id: data.cdb_query_id || 'query',
+          length: data.sequence_length,
+          co2_prob_v3: data.carboxylase_probability,
+          co2_prob_v5: data.carboxylase_probability,
+          consensus: data.is_carboxylase,
+          nearest_neighbor: data.top_similar?.[0]
+            ? {
+                ...data.top_similar[0],
+                km_experimental: data.top_similar[0].km_experimental_uM,
+              }
+            : null,
+          similar_with_km: data.top_similar || [],
+        }
+
+        batchResults.value = [result]
+
+        summary.value = {
+          total: 1,
+          consensus_positive: data.is_carboxylase ? 1 : 0,
+          with_neighbor: data.top_similar?.length > 0 ? 1 : 0,
+        }
+
+        selectedResult.value = result
+        predictStatus.value = 'completed'
+      } catch (e) {
+        if (e.name === 'AbortError') {
+          return
+        }
+
+        clearPredictPoll()
+        loading.value = false
+        predictAbortController.value = null
+        error.value = `Polling error: ${e.message}`
+      }
+    }, 2000)
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      error.value = 'Prediction request cancelled'
+    } else {
+      error.value = `Request failed: ${e.message}`
+    }
+
+    clearPredictPoll()
+    loading.value = false
+    predictAbortController.value = null
+  }
 }
 
 let batchPollInterval = null
@@ -511,7 +651,14 @@ function getProbClass(prob) {
   return 'prob-low'
 }
 
-onUnmounted(() => { clearBatchPoll() })
+onUnmounted(() => {
+  clearBatchPoll()
+  clearPredictPoll()
+
+  if (predictAbortController.value) {
+    predictAbortController.value.abort()
+  }
+})
 </script>
 
 <style scoped>
@@ -833,6 +980,21 @@ textarea:focus {
   text-decoration: none;
   border-bottom-color: #dd6b20;
   color: #c05621;
+}
+
+.cancel-btn {
+  margin-left: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border: 1px solid #c44;
+  border-radius: 8px;
+  background: white;
+  color: #c44;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.cancel-btn:hover {
+  background: #fff0f0;
 }
 
 .unified-input .input-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
