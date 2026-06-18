@@ -12,7 +12,7 @@ MAX_STANDARD = int(os.environ.get("MAX_BATCH_STANDARD", 500))
 
 
 @router.post("/batch")
-async def submit_batch(
+def submit_batch(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     mode: str = Form("fast"),
@@ -21,7 +21,8 @@ async def submit_batch(
 ):
     if mode not in ('fast', 'standard'):
         raise HTTPException(400, "Batch mode must be fast or standard")
-    content = await file.read()
+    # Use sync file read for UploadFile when endpoint is sync
+    content = file.file.read()
     text = content.decode('utf-8', errors='ignore')
     n_seqs = text.count('>')
     if n_seqs == 0:
@@ -78,10 +79,25 @@ def download_results(job_id: str):
                         filename=f"carbodb_batch_{job_id}.tsv")
 
 
+@router.get("/jobs/{job_id}/seq/{seq_id}")
+def get_job_seq(job_id: str, seq_id: str):
+    seq_path = os.path.join(JOBS_DIR, job_id, "seqs", f"{seq_id}.json")
+    if not os.path.exists(seq_path):
+        raise HTTPException(404, "Sequence not found in job cache")
+    try:
+        with open(seq_path) as f:
+            data = json.load(f)
+        return data
+    except Exception:
+        raise HTTPException(500, "Failed to read cached sequence data")
+
+
 def run_batch_job(job_id: str, input_path: str, mode: str, kingdom: str):
     from ..pipeline.predict import predict_sequence
     job_dir = os.path.join(JOBS_DIR, job_id)
     meta_path = os.path.join(job_dir, "job.json")
+    seqs_dir = os.path.join(job_dir, "seqs")
+    os.makedirs(seqs_dir, exist_ok=True)
 
     def update_meta(updates):
         with open(meta_path) as f:
@@ -114,6 +130,12 @@ def run_batch_job(job_id: str, input_path: str, mode: str, kingdom: str):
                 try:
                     r = predict_sequence(sequence, mode=mode,
                                         kingdom=kingdom, seq_id=seq_id)
+                    # Cache per-sequence JSON for quick lookups by frontend
+                    try:
+                        with open(os.path.join(seqs_dir, f"{seq_id}.json"), 'w') as sf:
+                            json.dump(r, sf)
+                    except Exception:
+                        pass
                     pfam_str = ';'.join(r.get('pfam_hits', []))
                     fout.write(
                         f"{seq_id}\t{r['sequence_length']}\t"
@@ -127,6 +149,12 @@ def run_batch_job(job_id: str, input_path: str, mode: str, kingdom: str):
                     fout.flush()
                 except Exception as e:
                     fout.write(f"{seq_id}\t0\tERROR\t\t\t\t\t\t\t\t{str(e)[:100]}\n")
+                    # write error JSON so frontend can at least display the row
+                    try:
+                        with open(os.path.join(seqs_dir, f"{seq_id}.json"), 'w') as sf:
+                            json.dump({'error': str(e)}, sf)
+                    except Exception:
+                        pass
                 processed += 1
                 if processed % 10 == 0:
                     update_meta({"processed": processed})

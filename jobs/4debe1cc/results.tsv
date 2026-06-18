@@ -1,0 +1,3 @@
+seq_id	length	is_carboxylase	prob_binary	ec_predicted	ec_confidence	km_predicted_mM	km_predicted_uM	pfam_hits	novelty_flag	runtime_seconds
+RuBisCO_spinach_P00875	0	ERROR								sequence item 0: expected str instance, dict found
+CA2_human_P00918	0	ERROR								sequence item 0: expected str instance, dict found

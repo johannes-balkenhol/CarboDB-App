@@ -1,5 +1,6 @@
 import os, time, logging
 from contextlib import asynccontextmanager
+import asyncio
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,10 +17,14 @@ log = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     log.info("CarboDB webapp starting...")
     t = time.time()
-    load_all_models()
+    # Run the potentially blocking model load in a thread to avoid blocking the event loop
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, load_all_models)
     log.info(f"Models loaded in {time.time()-t:.1f}s")
-    yield
-    log.info("CarboDB webapp shutting down")
+    try:
+        yield
+    finally:
+        log.info("CarboDB webapp shutting down")
 
 app = FastAPI(title="CarboDB v5",
               description="Carboxylase sequence · function · Km database",

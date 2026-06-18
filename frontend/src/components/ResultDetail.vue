@@ -119,7 +119,7 @@
     </section>
 
     <!-- ═══ PFAM DOMAINS ═════════════════════════════════════════════════ -->
-    <section v-if="pfamNormalized.length > 0" class="rd-section">
+    <!-- <section v-if="pfamNormalized.length > 0" class="rd-section">
       <h3 class="rd-section-title">Pfam domains ({{ pfamNormalized.length }})</h3>
       <table class="rd-table">
         <thead>
@@ -136,6 +136,49 @@
             <td class="rd-mono">{{ hit.name || '—' }}</td>
             <td class="num rd-mono">{{ hit.e_value != null ? hit.e_value.toExponential(1) : '—' }}</td>
             <td class="num rd-mono">{{ hit.bitscore != null ? hit.bitscore.toFixed(1) : '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section> -->
+
+    <!-- ═══NEW PFAM DOMAINS ═════════════════════════════════════════════════ -->
+    <section v-if="pfamNormalized.length > 0" class="rd-section">
+      <h3 class="rd-section-title">Pfam domains ({{ pfamNormalized.length }})</h3>
+
+      <table class="rd-table">
+        <thead>
+          <tr>
+            <th>Accession</th>
+            <th>Target name</th>
+            <th>Description</th>
+            <th class="num">E-value</th>
+            <th class="num">Bitscore</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr v-for="hit in pfamNormalized" :key="hit.accession">
+            <td>
+              <a
+                :href="'https://www.ebi.ac.uk/interpro/entry/pfam/' + hit.accession"
+                target="_blank"
+                rel="noopener"
+                class="rd-link"
+              >
+                {{ hit.accession }}
+              </a>
+            </td>
+
+            <td class="rd-mono">{{ hit.target_name || '—' }}</td>
+            <td>{{ hit.description || '—' }}</td>
+
+            <td class="num rd-mono">
+              {{ hit.evalue != null ? hit.evalue.toExponential(1) : '—' }}
+            </td>
+
+            <td class="num rd-mono">
+              {{ hit.bitscore != null ? hit.bitscore.toFixed(1) : '—' }}
+            </td>
           </tr>
         </tbody>
       </table>
@@ -417,13 +460,43 @@ const sortedEcProbs = computed(() => {
 })
 
 // ─── Pfam normalization (handles both old list[str] and new list[dict]) ──
+// const pfamNormalized = computed(() => {
+//   const hits = props.result.pfam_hits || []
+//   return hits.map(h => {
+//     if (typeof h === 'string') return { accession: h, name: null, e_value: null, bitscore: null }
+//     return { accession: h.accession, name: h.name, e_value: h.e_value, bitscore: h.bitscore }
+//   })
+// })
+
+// ─── NEW Pfam normalization (handles both old list[str] and new list[dict]) ──
 const pfamNormalized = computed(() => {
   const hits = props.result.pfam_hits || []
+
   return hits.map(h => {
-    if (typeof h === 'string') return { accession: h, name: null, e_value: null, bitscore: null }
-    return { accession: h.accession, name: h.name, e_value: h.e_value, bitscore: h.bitscore }
+    if (typeof h === 'string') {
+      return {
+        accession: h,
+        target_name: null,
+        description: null,
+        evalue: null,
+        bitscore: null,
+        full_sequence_evalue: null,
+        full_sequence_bitscore: null,
+      }
+    }
+
+    return {
+      accession: h.accession,
+      target_name: h.target_name || h.name || null,
+      description: h.description || null,
+      evalue: h.evalue ?? h.e_value ?? null,
+      bitscore: h.bitscore ?? null,
+      full_sequence_evalue: h.full_sequence_evalue ?? null,
+      full_sequence_bitscore: h.full_sequence_bitscore ?? null,
+    }
   })
 })
+
 
 // ─── Motif interpretation ────────────────────────────────────────────────
 // The pipeline computes 7 EC-specific regex motifs. Surface them with labels.
