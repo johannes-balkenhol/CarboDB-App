@@ -1,0 +1,14 @@
+INFO:     Started server process [3232176]
+INFO:     Waiting for application startup.
+2026-06-18 15:36:19,084 INFO CarboDB webapp starting...
+2026-06-18 15:36:19,086 INFO Feature names loaded: 1793 features
+2026-06-18 15:36:19,087 INFO EC label map: 27 classes
+2026-06-18 15:36:19,575 INFO Binary model loaded
+2026-06-18 15:36:20,449 INFO EC model loaded
+2026-06-18 15:36:20,561 INFO Km model loaded
+2026-06-18 15:36:22,838 INFO Loading ESM-2 on cpu...
+2026-06-18 15:36:28,771 INFO ESM-2 loaded successfully
+2026-06-18 15:36:28,772 INFO All models ready
+2026-06-18 15:36:28,772 INFO Models loaded in 9.7s
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8091 (Press CTRL+C to quit)

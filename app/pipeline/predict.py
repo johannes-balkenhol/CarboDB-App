@@ -5,7 +5,10 @@ import logging
 import subprocess
 import json
 import tempfile
+import sqlite3
+import traceback
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 import numpy as np
 
@@ -17,6 +20,10 @@ log = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parents[2]  # Navigate to project root
 TMP_DIR = ROOT / "tmp"
 TMP_DIR.mkdir(parents=True, exist_ok=True)
+
+# Define valid modes and kingdoms for prediction
+VALID_PREDICT_MODES = {"fast", "standard", "pfam", "composite"}
+VALID_KINGDOMS = {"bacteria", "plant", "archaea", "fungi"}
 
 # Use local copy of annotation script (standalone, no CarboDB repo needed)
 _local = Path(__file__).parent / "annotate.py"
@@ -86,6 +93,59 @@ def _normalise_pfam_hits(pfam_hits):
 
     return normalised
 
+
+def get_similar_from_db(ec: str, km_uM: Optional[float], limit: int = 8) -> list[dict[str, Any]]:
+    """
+    Get similar reviewed CarboDB sequences for frontend context.
+
+    Kept in pipeline/predict.py so queued worker tasks can return the same
+    result shape as the old synchronous /predict route.
+    """
+    db_path = os.environ.get("DB_PATH", "data/carbodb.sqlite")
+
+    if not os.path.exists(db_path):
+        return []
+
+    try:
+        conn = sqlite3.connect(db_path, timeout=10)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+
+        cur.execute(
+            """
+            SELECT s.uniprot_id,
+                   s.organism,
+                   p.km_pred_mM * 1000 AS km_pred_uM,
+                   s.reviewed
+            FROM sequences s
+            JOIN predictions p ON p.sequence_id = s.id
+            WHERE s.label = 1
+              AND s.ec_number = ?
+              AND p.km_pred_mM IS NOT NULL
+              AND s.reviewed = 1
+            ORDER BY RANDOM()
+            LIMIT ?
+            """,
+            (ec, limit),
+        )
+
+        rows = cur.fetchall()
+        conn.close()
+
+        return [
+            {
+                "uniprot_id": r["uniprot_id"],
+                "organism": r["organism"],
+                "km_predicted_uM": round(r["km_pred_uM"], 1) if r["km_pred_uM"] else None,
+                "km_experimental_uM": None,
+                "reviewed": bool(r["reviewed"]),
+            }
+            for r in rows
+        ]
+
+    except Exception:
+        log.exception("Failed to query similar sequences from DB")
+        return []
 
 def predict_sequence(sequence, mode="fast", kingdom="plant", seq_id="query"):
     t = time.time()
@@ -227,3 +287,82 @@ def predict_sequence(sequence, mode="fast", kingdom="plant", seq_id="query"):
             os.unlink(fasta_path)
         except Exception:
             pass
+
+# new routine for worker task
+
+def run_predict_job(
+    sequence: str,
+    mode: str = "fast",
+    kingdom: str = "plant",
+    seq_id: str = "query",
+    include_similar: bool = True,
+) -> Dict[str, Any]:
+    """
+    RQ-compatible worker task for one sequence prediction.
+
+    This function is intentionally top-level and only accepts JSON-serializable
+    arguments so it can be enqueued as:
+
+        queue.enqueue(
+            "app.pipeline.predict.run_predict_job",
+            sequence,
+            mode,
+            kingdom,
+            seq_id,
+        )
+
+    It returns a structured payload that can be stored directly in Redis/RQ.
+    """
+
+    started_at = time.time()
+
+    try:
+        sequence = (sequence or "").strip()
+        mode = mode or "fast"
+        kingdom = kingdom or "plant"
+        seq_id = seq_id or "query"
+
+        if len(sequence) < 10:
+            raise ValueError("Sequence too short")
+
+        if mode not in VALID_PREDICT_MODES:
+            raise ValueError(f"Invalid mode: {mode}")
+
+        if kingdom not in VALID_KINGDOMS:
+            raise ValueError(f"Invalid kingdom: {kingdom}")
+
+        result = predict_sequence(
+            sequence=sequence,
+            mode=mode,
+            kingdom=kingdom,
+            seq_id=seq_id,
+        )
+
+        if include_similar and result.get("ec_predicted") and result.get("is_carboxylase"):
+            result["top_similar"] = get_similar_from_db(
+                result["ec_predicted"],
+                result.get("km_predicted_uM"),
+            )
+        else:
+            result["top_similar"] = []
+
+        return {
+            "status": "completed",
+            "result": result,
+            "error": None,
+            "runtime_seconds": round(time.time() - started_at, 2),
+        }
+
+    except Exception as exc:
+        log.exception("Prediction worker task failed")
+
+        return {
+            "status": "failed",
+            "result": None,
+            "error": {
+                "type": exc.__class__.__name__,
+                "message": str(exc),
+                "traceback": traceback.format_exc(limit=5),
+            },
+            "runtime_seconds": round(time.time() - started_at, 2),
+        }

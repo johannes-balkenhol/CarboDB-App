@@ -1,0 +1,12 @@
+/home/s391913/miniconda3/envs/carboxylase/lib/python3.11/site-packages/click/core.py:1223: UserWarning: The parameter --serializer is used more than once. Remove its duplicate as parameters should be unique.
+  parser = self.make_parser(ctx)
+/home/s391913/miniconda3/envs/carboxylase/lib/python3.11/site-packages/click/core.py:1223: UserWarning: The parameter -S is used more than once. Remove its duplicate as parameters should be unique.
+  parser = self.make_parser(ctx)
+/home/s391913/miniconda3/envs/carboxylase/lib/python3.11/site-packages/click/core.py:1216: UserWarning: The parameter --serializer is used more than once. Remove its duplicate as parameters should be unique.
+  self.parse_args(ctx, args)
+/home/s391913/miniconda3/envs/carboxylase/lib/python3.11/site-packages/click/core.py:1216: UserWarning: The parameter -S is used more than once. Remove its duplicate as parameters should be unique.
+  self.parse_args(ctx, args)
+15:36:16 Worker rq:worker:c6673319563b4ecea71fb2f579583d99 started with PID 3232175, version 1.16.2
+15:36:16 Subscribing to channel rq:pubsub:c6673319563b4ecea71fb2f579583d99
+15:36:16 *** Listening on predict...
+15:36:16 Cleaning registries for queue: predict

@@ -38,10 +38,31 @@ app.include_router(predict_router, prefix="/api/v1")
 app.include_router(browse_router, prefix="/api/v1")
 app.include_router(batch_router, prefix="/api/v1")
 
+# @app.get("/api/v1/health")
+# def health():
+#     return {"status": "ok", "models_loaded": ModelStore.ready,
+#             "db_path": os.environ.get("DB_PATH", "not set")}
+
 @app.get("/api/v1/health")
 def health():
-    return {"status": "ok", "models_loaded": ModelStore.ready,
-            "db_path": os.environ.get("DB_PATH", "not set")}
+    redis_ok = False
+    redis_error = None
+
+    try:
+        from .rq_queue import get_redis_connection
+        redis_ok = bool(get_redis_connection().ping())
+    except Exception as e:
+        redis_error = str(e)
+
+    return {
+        "status": "ok",
+        "models_loaded": ModelStore.ready,
+        "db_path": os.environ.get("DB_PATH", "not set"),
+        "redis_ok": redis_ok,
+        "redis_error": redis_error,
+        "predict_queue": os.environ.get("PREDICT_QUEUE_NAME", "predict"),
+    }
+
 
 # Static frontend LAST — catches everything else
 static_dir = os.path.join(os.path.dirname(__file__), "..", "static")

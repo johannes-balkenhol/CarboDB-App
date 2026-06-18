@@ -1,0 +1,14 @@
+3232151:C 18 Jun 2026 15:36:13.656 # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
+3232151:C 18 Jun 2026 15:36:13.657 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+3232151:C 18 Jun 2026 15:36:13.657 * Redis version=8.8.0, bits=64, commit=46690297, modified=0, pid=3232151, just started
+3232151:C 18 Jun 2026 15:36:13.657 * Configuration loaded
+3232151:M 18 Jun 2026 15:36:13.657 * monotonic clock: POSIX clock_gettime
+3232151:M 18 Jun 2026 15:36:13.659 * Running mode=standalone, port=6379.
+3232151:M 18 Jun 2026 15:36:13.660 * Server initialized
+3232151:M 18 Jun 2026 15:36:13.684 * Loading RDB produced by version 8.8.0
+3232151:M 18 Jun 2026 15:36:13.684 * RDB age 2 seconds
+3232151:M 18 Jun 2026 15:36:13.684 * RDB memory usage when created 1.23 Mb
+3232151:M 18 Jun 2026 15:36:13.684 * Done loading RDB, keys loaded: 10, keys expired: 0.
+3232151:M 18 Jun 2026 15:36:13.685 * DB loaded from disk: 0.003 seconds
+3232151:M 18 Jun 2026 15:36:13.685 * Ready to accept connections tcp
+3232151:M 18 Jun 2026 15:36:13.685 # WARNING: Redis does not require authentication. Redis will accept connections from any local client.

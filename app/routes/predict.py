@@ -4,9 +4,12 @@ routes/predict.py — Single sequence prediction endpoint
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-import sqlite3, os, json
+import sqlite3, os
 
-from ..pipeline.predict import predict_sequence
+from rq.job import Job
+from rq.exceptions import NoSuchJobError
+
+from ..rq_queue import get_predict_queue, get_redis_connection
 from ..startup import ModelStore
 
 router = APIRouter(tags=["predict"])
@@ -18,33 +21,121 @@ class PredictRequest(BaseModel):
     seq_id: Optional[str] = "query"
 
 @router.post("/predict")
-def predict(req: PredictRequest):
+def submit_predict(req: PredictRequest):
+    """
+    Submit a single-sequence prediction job.
+
+    This endpoint no longer blocks while prediction runs. It returns a job_id
+    that the frontend can poll via GET /predict/{job_id}.
+    """
     if not ModelStore.ready:
         raise HTTPException(503, "Models not loaded yet")
-    if not req.sequence or len(req.sequence.strip()) < 10:
+
+    sequence = (req.sequence or "").strip()
+
+    if not sequence or len(sequence) < 10:
         raise HTTPException(400, "Sequence too short")
-    if req.mode not in ('fast', 'standard', 'pfam', 'composite'):
+
+    if req.mode not in ("fast", "standard", "pfam", "composite"):
         raise HTTPException(400, f"Invalid mode: {req.mode}")
 
     try:
-        result = predict_sequence(
-            sequence=req.sequence,
+        queue = get_predict_queue()
+
+        job = queue.enqueue(
+            "app.pipeline.predict.run_predict_job",
+            sequence=sequence,
             mode=req.mode,
             kingdom=req.kingdom,
-            seq_id=req.seq_id or "query"
+            seq_id=req.seq_id or "query",
+            job_timeout=int(os.environ.get("PREDICT_JOB_TIMEOUT", "300")),
+            result_ttl=int(os.environ.get("PREDICT_RESULT_TTL", "3600")),
+            failure_ttl=int(os.environ.get("PREDICT_FAILURE_TTL", "86400")),
         )
-        # Add similar sequences from DB
-        if result.get('ec_predicted') and result.get('is_carboxylase'):
-            result['top_similar'] = get_similar_from_db(
-                result['ec_predicted'], result.get('km_predicted_uM'))
-        else:
-            result['top_similar'] = []
-        return result
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    except Exception as e:
-        raise HTTPException(500, f"Prediction failed: {e}")
 
+        return {
+            "job_id": job.id,
+            "status": "queued",
+            "message": "Prediction job submitted",
+        }
+
+    except Exception as e:
+        raise HTTPException(500, f"Failed to enqueue prediction job: {e}")
+
+@router.get("/predict/{job_id}")
+def get_predict_job(job_id: str):
+    """
+    Poll a single-sequence prediction job.
+    """
+    try:
+        redis_conn = get_redis_connection()
+        job = Job.fetch(job_id, connection=redis_conn)
+
+    except NoSuchJobError:
+        raise HTTPException(404, "Prediction job not found")
+
+    except Exception as e:
+        raise HTTPException(500, f"Failed to fetch prediction job: {e}")
+
+    rq_status = job.get_status(refresh=True)
+
+    response = {
+        "job_id": job.id,
+        "status": rq_status,
+        "result": None,
+        "error": None,
+    }
+
+    if rq_status in ("queued", "deferred", "scheduled"):
+        return response
+    
+    if rq_status in ("canceled", "cancelled"):
+        response["status"] = "cancelled"
+        response["error"] = {
+            "message": "Prediction job was cancelled",
+        }
+        return response
+
+    if rq_status == "started":
+        response["status"] = "running"
+        return response
+
+    if rq_status == "failed":
+        response["status"] = "failed"
+        response["error"] = {
+            "message": job.exc_info or "Prediction job failed",
+        }
+        return response
+
+    if rq_status == "finished":
+        payload = job.result or {}
+
+        # run_predict_job catches biological/runtime errors and returns
+        # {"status": "failed", "error": ...}, so inspect payload too.
+        if payload.get("status") == "failed":
+            response["status"] = "failed"
+            response["error"] = payload.get("error") or {
+                "message": "Prediction failed",
+            }
+            return response
+
+        result = payload.get("result")
+
+        if result and result.get("ec_predicted") and result.get("is_carboxylase"):
+            result["top_similar"] = get_similar_from_db(
+                result["ec_predicted"],
+                result.get("km_predicted_uM"),
+            )
+        elif result:
+            result["top_similar"] = []
+
+        response["status"] = "completed"
+        response["result"] = result
+        response["runtime_seconds"] = payload.get("runtime_seconds")
+
+        return response
+
+    return response
 
 def get_similar_from_db(ec: str, km_uM: Optional[float], limit: int = 8) -> list:
     """Get similar sequences from CarboDB for context."""
@@ -74,3 +165,46 @@ def get_similar_from_db(ec: str, km_uM: Optional[float], limit: int = 8) -> list
                  'reviewed': bool(r['reviewed'])} for r in rows]
     except Exception as e:
         return []
+    
+# cancellation endpoint
+
+@router.delete("/predict/{job_id}")
+def cancel_predict_job(job_id: str):
+    """
+    Cancel a queued prediction job.
+
+    If the job is already running, RQ cannot reliably kill it without extra worker-control
+    setup, so we report that clearly.
+    """
+    try:
+        redis_conn = get_redis_connection()
+        job = Job.fetch(job_id, connection=redis_conn)
+
+    except NoSuchJobError:
+        raise HTTPException(404, "Prediction job not found")
+
+    except Exception as e:
+        raise HTTPException(500, f"Failed to fetch prediction job: {e}")
+
+    status = job.get_status(refresh=True)
+
+    if status in ("queued", "deferred", "scheduled"):
+        job.cancel()
+        return {
+            "job_id": job.id,
+            "status": "cancelled",
+            "message": "Prediction job cancelled before execution",
+        }
+
+    if status in ("started",):
+        return {
+            "job_id": job.id,
+            "status": status,
+            "message": "Job is already running and cannot be safely cancelled yet",
+        }
+
+    return {
+        "job_id": job.id,
+        "status": status,
+        "message": f"Job is already {status}",
+    }

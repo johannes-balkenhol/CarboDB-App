@@ -1,0 +1,16 @@
+2026-06-18 14:07:36  INFO      Log file: /storage/users/projects/CarboDB-App-v2/logs/11_annotate_sequence_20260618_140736.log
+2026-06-18 14:07:36  INFO      Parsed 1 sequence(s)
+2026-06-18 14:07:36  INFO      ── Annotating: test (len=47) ──
+2026-06-18 14:07:36  INFO      Loading models...
+2026-06-18 14:07:38  INFO        Loaded model: binary_v5.json
+2026-06-18 14:07:39  INFO        Loaded model: ec_v5.json
+2026-06-18 14:07:39  INFO        Loaded model: km_v5_weighted.json
+2026-06-18 14:07:39  INFO      Computing composition features...
+2026-06-18 14:07:39  INFO      Running HMMER/Pfam scan...
+2026-06-18 14:07:42  INFO      Skipping ESM-2 (--no-esm2 mode)
+2026-06-18 14:07:42  INFO      Assembling feature vector...
+2026-06-18 14:07:42  INFO      Predicting carboxylase activity...
+2026-06-18 14:07:42  INFO        is_carboxylase=True  prob=0.9999  confidence=high
+2026-06-18 14:07:42  INFO        ec_pred=4.2.1.1  prob=0.8541
+2026-06-18 14:07:42  INFO        km_pred=6.1545 mM (log10=0.789)
+2026-06-18 14:07:42  INFO      Saved: /storage/users/projects/CarboDB-App-v2/tmp/tmpekjqs31r.json
