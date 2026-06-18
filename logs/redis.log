@@ -1,20 +1,14 @@
-3246285:C 18 Jun 2026 15:46:14.430 # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
-3246285:C 18 Jun 2026 15:46:14.430 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
-3246285:C 18 Jun 2026 15:46:14.430 * Redis version=8.8.0, bits=64, commit=46690297, modified=0, pid=3246285, just started
-3246285:C 18 Jun 2026 15:46:14.430 * Configuration loaded
-3246285:M 18 Jun 2026 15:46:14.430 * monotonic clock: POSIX clock_gettime
-3246285:M 18 Jun 2026 15:46:14.432 * Running mode=standalone, port=6379.
-3246285:M 18 Jun 2026 15:46:14.433 * Server initialized
-3246285:M 18 Jun 2026 15:46:14.439 * Loading RDB produced by version 8.8.0
-3246285:M 18 Jun 2026 15:46:14.439 * RDB age 2 seconds
-3246285:M 18 Jun 2026 15:46:14.439 * RDB memory usage when created 1.20 Mb
-3246285:M 18 Jun 2026 15:46:14.439 * Done loading RDB, keys loaded: 10, keys expired: 0.
-3246285:M 18 Jun 2026 15:46:14.440 * DB loaded from disk: 0.003 seconds
-3246285:M 18 Jun 2026 15:46:14.440 * Ready to accept connections tcp
-3246285:M 18 Jun 2026 15:46:14.440 # WARNING: Redis does not require authentication. Redis will accept connections from any local client.
-3246285:M 18 Jun 2026 15:51:15.097 * 100 changes in 300 seconds. Saving...
-3246285:M 18 Jun 2026 15:51:15.098 * Background saving started by pid 3253477
-3253477:C 18 Jun 2026 15:51:15.101 * BGSAVE done, 18 keys saved, 0 keys skipped, 13258 bytes written.
-3253477:C 18 Jun 2026 15:51:15.107 * DB saved on disk
-3253477:C 18 Jun 2026 15:51:15.108 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
-3246285:M 18 Jun 2026 15:51:15.200 * Background saving terminated with success
+3303465:C 18 Jun 2026 16:43:21.457 # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
+3303465:C 18 Jun 2026 16:43:21.457 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+3303465:C 18 Jun 2026 16:43:21.457 * Redis version=8.8.0, bits=64, commit=46690297, modified=0, pid=3303465, just started
+3303465:C 18 Jun 2026 16:43:21.457 * Configuration loaded
+3303465:M 18 Jun 2026 16:43:21.457 * monotonic clock: POSIX clock_gettime
+3303465:M 18 Jun 2026 16:43:21.460 * Running mode=standalone, port=6379.
+3303465:M 18 Jun 2026 16:43:21.460 * Server initialized
+3303465:M 18 Jun 2026 16:43:21.463 * Loading RDB produced by version 8.8.0
+3303465:M 18 Jun 2026 16:43:21.463 * RDB age 2 seconds
+3303465:M 18 Jun 2026 16:43:21.463 * RDB memory usage when created 1.53 Mb
+3303465:M 18 Jun 2026 16:43:21.464 * Done loading RDB, keys loaded: 31, keys expired: 0.
+3303465:M 18 Jun 2026 16:43:21.465 * DB loaded from disk: 0.004 seconds
+3303465:M 18 Jun 2026 16:43:21.465 * Ready to accept connections tcp
+3303465:M 18 Jun 2026 16:43:21.465 # WARNING: Redis does not require authentication. Redis will accept connections from any local client.

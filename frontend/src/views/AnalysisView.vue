@@ -440,31 +440,60 @@ async function predictBatch() {
     }
 
     batchPollInterval = setInterval(async () => {
-      try {
-        const pollRes = await fetch(`${API_URL}/api/v1/jobs/${jobId}`)
-        if (!pollRes.ok) throw new Error(`Poll failed (HTTP ${pollRes.status})`)
-        const meta = await pollRes.json()
-        batchProgress.value = {
-          jobId, status: meta.status,
-          processed: meta.processed || 0,
-          total: meta.n_sequences,
-          progressPct: meta.progress_pct || 0
-        }
-        if (meta.status === 'completed') {
-          clearBatchPoll()
-          await loadBatchResults(jobId)
-          loading.value = false
-        } else if (meta.status === 'failed') {
-          clearBatchPoll()
-          error.value = `Batch job failed: ${meta.error || 'unknown error'}`
-          loading.value = false
-        }
-      } catch (e) {
-        clearBatchPoll()
-        error.value = `Polling error: ${e.message}`
-        loading.value = false
+    try {
+      const pollRes = await fetch(`${API_URL}/api/v1/batch/${jobId}`)
+
+      if (!pollRes.ok) {
+        const errText = await pollRes.text()
+        throw new Error(`Poll failed (HTTP ${pollRes.status}): ${errText}`)
       }
-    }, 3000)
+
+      const meta = await pollRes.json()
+
+      const total = meta.n_sequences || submitData.n_sequences || 1
+      const completed = meta.status === 'completed'
+      const running = ['queued', 'running', 'started', 'deferred', 'scheduled'].includes(meta.status)
+
+      batchProgress.value = {
+        jobId,
+        status: meta.status,
+        processed: completed ? total : 0,
+        total,
+        progressPct: completed ? 100 : 0,
+      }
+
+      if (running) {
+        return
+      }
+
+      clearBatchPoll()
+      loading.value = false
+
+      if (meta.status === 'cancelled' || meta.status === 'canceled') {
+        error.value = 'Batch prediction cancelled.'
+        return
+      }
+
+      if (meta.status === 'failed') {
+        error.value =
+          meta.error?.message ||
+          meta.error?.detail ||
+          'Batch job failed'
+        return
+      }
+
+      if (meta.status !== 'completed') {
+        error.value = `Unexpected batch status: ${meta.status}`
+        return
+      }
+
+      loadBatchResultsFromPayload(jobId, meta)
+    } catch (e) {
+      clearBatchPoll()
+      error.value = `Polling error: ${e.message}`
+      loading.value = false
+    }
+  }, 3000)
   } catch (e) {
     clearBatchPoll()
     error.value = `Request failed: ${e.message}`
@@ -513,6 +542,32 @@ async function loadBatchResults(jobId) {
     total: rows.length,
     consensus_positive: rows.filter(r => r.consensus).length,
     with_neighbor: rows.filter(r => r.nearest_neighbor).length
+  }
+}
+
+function loadBatchResultsFromPayload(jobId, payload) {
+  const rows = payload.result || []
+
+  batchResults.value = rows.map(r => ({
+    ...r,
+    id: r.id || r.cdb_query_id || 'query',
+    length: r.length || r.sequence_length || 0,
+    co2_prob_v3: r.co2_prob_v3 ?? r.carboxylase_probability ?? 0,
+    co2_prob_v5: r.co2_prob_v5 ?? r.carboxylase_probability ?? 0,
+    consensus: r.consensus ?? r.is_carboxylase ?? false,
+    is_carboxylase: r.is_carboxylase ?? r.consensus ?? false,
+    ec_predicted: r.ec_predicted || '',
+    ec_confidence: r.ec_confidence ?? 0,
+    km_predicted_uM: r.km_predicted_uM ?? null,
+    nearest_neighbor: r.nearest_neighbor || null,
+    similar_with_km: r.top_similar || [],
+    _jobId: jobId,
+  }))
+
+  summary.value = payload.summary || {
+    total: batchResults.value.length,
+    consensus_positive: batchResults.value.filter(r => r.consensus).length,
+    with_neighbor: batchResults.value.filter(r => r.nearest_neighbor).length,
   }
 }
 
@@ -582,9 +637,9 @@ async function viewDetail(result) {
   try {
     // Prefer the cached per-seq JSON the batch worker saved (instant — no re-predict)
     let data = null
-    if (result._jobId) {
-      const cacheRes = await fetch(`${API_URL}/api/v1/jobs/${result._jobId}/seq/${result.id}`)
-      if (cacheRes.ok) data = await cacheRes.json()
+    if (result._jobId && (result.features_used || result.pfam_hits || result.ec_probabilities)) {
+      selectedResult.value = result
+      return
     }
     // Fall back to a fresh /predict call only if the cache lookup failed
     if (!data || !data.ec_predicted) {
@@ -618,23 +673,44 @@ async function viewDetail(result) {
   }
 }
 
-function downloadResults() {
+async function downloadResults() {
+  const jobId = batchProgress.value?.jobId || batchResults.value?.[0]?._jobId
+
+  if (jobId) {
+    try {
+      const res = await fetch(`${API_URL}/api/v1/batch/${jobId}/results.tsv`)
+
+      if (res.ok) {
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `carbodb_batch_${jobId}.tsv`
+        a.click()
+        URL.revokeObjectURL(url)
+        return
+      }
+    } catch (e) {
+      console.warn('Backend TSV download failed, falling back to frontend TSV:', e)
+    }
+  }
+
   const headers = ['ID', 'Length', 'v3_Prob', 'v5_Prob', 'Consensus', 'EC_Predicted', 'EC_Conf', 'Km_uM', 'Nearest_Match', 'Match_Km']
   const rows = batchResults.value.map(r => [
     r.id,
     r.length,
-    r.carboxylase_probability?.toFixed(4),
-    r.carboxylase_probability?.toFixed(4),
+    r.carboxylase_probability?.toFixed?.(4) || r.co2_prob_v3?.toFixed?.(4) || '',
+    r.carboxylase_probability?.toFixed?.(4) || r.co2_prob_v5?.toFixed?.(4) || '',
     r.consensus ? 'Yes' : 'No',
     r.ec_predicted,
-    r.ec_confidence?.toFixed(4),
-    r.km_predicted_uM?.toFixed(2),
+    r.ec_confidence?.toFixed?.(4) || '',
+    r.km_predicted_uM?.toFixed?.(2) || '',
     r.nearest_neighbor?.uniprot_id || '',
-    r.nearest_neighbor?.km_experimental?.toFixed(2) || ''
+    r.nearest_neighbor?.km_experimental?.toFixed?.(2) || ''
   ])
 
   const tsv = [headers.join('\t'), ...rows.map(r => r.join('\t'))].join('\n')
-  
+
   const blob = new Blob([tsv], { type: 'text/tab-separated-values' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

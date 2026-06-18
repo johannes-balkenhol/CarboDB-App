@@ -366,3 +366,208 @@ def run_predict_job(
             },
             "runtime_seconds": round(time.time() - started_at, 2),
         }
+
+def parse_fasta_text(text: str) -> dict[str, str]:
+    """
+    Parse FASTA text into {seq_id: sequence}.
+    """
+    seqs = {}
+    sid, buf = None, []
+
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+
+        if line.startswith(">"):
+            if sid:
+                seqs[sid] = "".join(buf)
+            sid = line[1:].split()[0]
+            buf = []
+        else:
+            buf.append(line)
+
+    if sid:
+        seqs[sid] = "".join(buf)
+
+    return seqs
+
+
+def pfam_hits_to_string(pfam_hits) -> str:
+    """
+    Convert Pfam hit objects/strings to a semicolon-separated TSV field.
+    """
+    return ";".join(
+        (
+            h.get("accession")
+            or h.get("target_name")
+            or ""
+        )
+        if isinstance(h, dict)
+        else str(h)
+        for h in (pfam_hits or [])
+    )
+
+
+def run_batch_predict_job(
+    fasta_text: str,
+    mode: str = "fast",
+    kingdom: str = "plant",
+) -> Dict[str, Any]:
+    """
+    RQ-compatible worker task for batch FASTA prediction.
+
+    Returns JSON-serializable batch results plus a TSV string.
+    """
+    started_at = time.time()
+
+    try:
+        mode = mode or "fast"
+        kingdom = kingdom or "plant"
+
+        if mode not in {"fast", "standard"}:
+            raise ValueError("Batch mode must be fast or standard")
+
+        if kingdom not in VALID_KINGDOMS:
+            raise ValueError(f"Invalid kingdom: {kingdom}")
+
+        seqs = parse_fasta_text(fasta_text or "")
+
+        if not seqs:
+            raise ValueError("No sequences found in FASTA file")
+
+        results = []
+
+        header = [
+            "seq_id",
+            "length",
+            "is_carboxylase",
+            "prob_binary",
+            "ec_predicted",
+            "ec_confidence",
+            "km_predicted_mM",
+            "km_predicted_uM",
+            "pfam_hits",
+            "novelty_flag",
+            "runtime_seconds",
+        ]
+
+        tsv_lines = ["\t".join(header)]
+
+        processed = 0
+
+        for seq_id, sequence in seqs.items():
+            try:
+                r = predict_sequence(
+                    sequence=sequence,
+                    mode=mode,
+                    kingdom=kingdom,
+                    seq_id=seq_id,
+                )
+
+                pfam_str = pfam_hits_to_string(r.get("pfam_hits", []))
+
+                row = {
+                    **r,
+                    "id": seq_id,
+                    "length": r.get("sequence_length", len(sequence)),
+                    "co2_prob_v3": r.get("carboxylase_probability", 0),
+                    "co2_prob_v5": r.get("carboxylase_probability", 0),
+                    "consensus": r.get("is_carboxylase", False),
+                    "pfam_string": pfam_str,
+                    "error": None,
+                }
+
+                results.append(row)
+
+                tsv_lines.append(
+                    "\t".join([
+                        seq_id,
+                        str(r.get("sequence_length", len(sequence))),
+                        str(r.get("is_carboxylase", False)),
+                        f"{r.get('carboxylase_probability', 0):.4f}",
+                        str(r.get("ec_predicted", "")),
+                        f"{r.get('ec_confidence', 0):.4f}",
+                        str(r.get("km_predicted_mM") or ""),
+                        str(r.get("km_predicted_uM") or ""),
+                        pfam_str,
+                        str(r.get("novelty_flag", "")),
+                        str(r.get("runtime_seconds", "")),
+                    ])
+                )
+
+            except Exception as exc:
+                error_row = {
+                    "id": seq_id,
+                    "length": len(sequence),
+                    "is_carboxylase": False,
+                    "consensus": False,
+                    "carboxylase_probability": 0,
+                    "co2_prob_v3": 0,
+                    "co2_prob_v5": 0,
+                    "ec_predicted": "",
+                    "ec_confidence": 0,
+                    "km_predicted_mM": None,
+                    "km_predicted_uM": None,
+                    "pfam_hits": [],
+                    "pfam_string": "",
+                    "novelty_flag": "",
+                    "runtime_seconds": None,
+                    "error": str(exc),
+                }
+
+                results.append(error_row)
+
+                tsv_lines.append(
+                    "\t".join([
+                        seq_id,
+                        str(len(sequence)),
+                        "ERROR",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        str(exc)[:100],
+                    ])
+                )
+
+            processed += 1
+
+        summary = {
+            "total": len(results),
+            "consensus_positive": sum(1 for r in results if r.get("consensus")),
+            "with_errors": sum(1 for r in results if r.get("error")),
+        }
+
+        return {
+            "status": "completed",
+            "results": results,
+            "summary": summary,
+            "tsv": "\n".join(tsv_lines) + "\n",
+            "n_sequences": len(results),
+            "runtime_seconds": round(time.time() - started_at, 2),
+            "error": None,
+        }
+
+    except Exception as exc:
+        log.exception("Batch prediction worker task failed")
+
+        return {
+            "status": "failed",
+            "results": [],
+            "summary": {
+                "total": 0,
+                "consensus_positive": 0,
+                "with_errors": 1,
+            },
+            "tsv": "",
+            "n_sequences": 0,
+            "runtime_seconds": round(time.time() - started_at, 2),
+            "error": {
+                "type": exc.__class__.__name__,
+                "message": str(exc),
+            },
+        }

@@ -1,0 +1,14 @@
+#                                                                            --- full sequence --- -------------- this domain -------------   hmm coord   ali coord   env coord
+# target name        accession   tlen query name           accession   qlen   E-value  score  bias   #  of  c-Evalue  i-Evalue  score  bias  from    to  from    to  from    to  acc description of target
+#------------------- ---------- ----- -------------------- ---------- ----- --------- ------ ----- --- --- --------- --------- ------ ----- ----- ----- ----- ----- ----- ----- ---- ---------------------
+RuBisCO_large_N      PF02788.22   120 seq1                 -             97   3.2e-22   79.5   0.0   1   1   1.5e-26   3.8e-22   79.2   0.0     2    72    24    94    23    97 0.95 Ribulose bisphosphate carboxylase large chain, N-terminal domain
+#
+# Program:         hmmscan
+# Version:         3.3.2 (Nov 2020)
+# Pipeline mode:   SCAN
+# Query file:      /storage/users/projects/CarboDB-App-v2/tmp/annotate_tmp_1781791959230/query.fasta
+# Target file:     /storage/users/projects/CarboDB-App-v2/data/dbs/pfam/Pfam-A.hmm
+# Option settings: hmmscan --domtblout /storage/users/projects/CarboDB-App-v2/tmp/annotate_tmp_1781791959230/hmmscan_pfam.tbl --noali -E 0.001 --cpu 4 /storage/users/projects/CarboDB-App-v2/data/dbs/pfam/Pfam-A.hmm /storage/users/projects/CarboDB-App-v2/tmp/annotate_tmp_1781791959230/query.fasta 
+# Current dir:     /storage/users/projects/CarboDB-App-v2
+# Date:            Thu Jun 18 16:12:40 2026
+# [ok]

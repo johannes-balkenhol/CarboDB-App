@@ -1,52 +1,39 @@
-INFO:     Started server process [3246316]
+INFO:     Started server process [3303489]
 INFO:     Waiting for application startup.
-2026-06-18 15:46:19,873 INFO CarboDB webapp starting...
-2026-06-18 15:46:19,876 INFO Feature names loaded: 1793 features
-2026-06-18 15:46:19,877 INFO EC label map: 27 classes
-2026-06-18 15:46:20,369 INFO Binary model loaded
-2026-06-18 15:46:21,211 INFO EC model loaded
-2026-06-18 15:46:21,332 INFO Km model loaded
-2026-06-18 15:46:23,443 INFO Loading ESM-2 on cpu...
-2026-06-18 15:46:29,475 INFO ESM-2 loaded successfully
-2026-06-18 15:46:29,476 INFO All models ready
-2026-06-18 15:46:29,476 INFO Models loaded in 9.6s
+2026-06-18 16:43:27,095 INFO CarboDB webapp starting...
+2026-06-18 16:43:27,096 INFO Feature names loaded: 1793 features
+2026-06-18 16:43:27,097 INFO EC label map: 27 classes
+2026-06-18 16:43:27,593 INFO Binary model loaded
+2026-06-18 16:43:28,481 INFO EC model loaded
+2026-06-18 16:43:28,593 INFO Km model loaded
+2026-06-18 16:43:30,928 INFO Loading ESM-2 on cpu...
+2026-06-18 16:43:36,970 INFO ESM-2 loaded successfully
+2026-06-18 16:43:36,971 INFO All models ready
+2026-06-18 16:43:36,972 INFO Models loaded in 9.9s
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8091 (Press CTRL+C to quit)
-INFO:     127.0.0.1:36604 - "POST /api/v1/predict HTTP/1.1" 200 OK
-INFO:     127.0.0.1:36620 - "GET /api/v1/predict/dc93cd41-93ad-4509-b1b5-15072621ee53 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:43900 - "GET /api/v1/predict/dc93cd41-93ad-4509-b1b5-15072621ee53 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:43916 - "GET /api/v1/predict/dc93cd41-93ad-4509-b1b5-15072621ee53 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:43920 - "GET /api/v1/predict/dc93cd41-93ad-4509-b1b5-15072621ee53 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:43926 - "GET /api/v1/predict/dc93cd41-93ad-4509-b1b5-15072621ee53 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:43942 - "GET /api/v1/predict/dc93cd41-93ad-4509-b1b5-15072621ee53 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:45028 - "GET /api/v1/predict/dc93cd41-93ad-4509-b1b5-15072621ee53 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:45042 - "GET /api/v1/predict/dc93cd41-93ad-4509-b1b5-15072621ee53 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:45044 - "GET /api/v1/predict/dc93cd41-93ad-4509-b1b5-15072621ee53 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:45056 - "GET /api/v1/predict/dc93cd41-93ad-4509-b1b5-15072621ee53 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:45062 - "GET /api/v1/predict/dc93cd41-93ad-4509-b1b5-15072621ee53 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60804 - "GET /api/v1/predict/dc93cd41-93ad-4509-b1b5-15072621ee53 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60816 - "GET /api/v1/predict/dc93cd41-93ad-4509-b1b5-15072621ee53 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60828 - "GET /api/v1/predict/dc93cd41-93ad-4509-b1b5-15072621ee53 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60830 - "GET /api/v1/predict/dc93cd41-93ad-4509-b1b5-15072621ee53 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59282 - "GET /api/v1/predict/dc93cd41-93ad-4509-b1b5-15072621ee53 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59284 - "GET /api/v1/predict/dc93cd41-93ad-4509-b1b5-15072621ee53 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58206 - "POST /api/v1/predict HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58212 - "DELETE /api/v1/predict/02a99501-8af0-4d43-8800-58f16ee1a773 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58222 - "POST /api/v1/predict HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58224 - "GET /api/v1/predict/403f6eb9-7cb4-4292-bad4-702c56abf157 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58236 - "GET /api/v1/predict/403f6eb9-7cb4-4292-bad4-702c56abf157 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:37956 - "GET /api/v1/predict/403f6eb9-7cb4-4292-bad4-702c56abf157 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:37960 - "DELETE /api/v1/predict/403f6eb9-7cb4-4292-bad4-702c56abf157 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:37962 - "POST /api/v1/batch HTTP/1.1" 200 OK
-INFO:     127.0.0.1:41242 - "GET /api/v1/jobs/f3f16c1c HTTP/1.1" 200 OK
-INFO:     127.0.0.1:41254 - "GET /api/v1/jobs/f3f16c1c HTTP/1.1" 200 OK
-INFO:     127.0.0.1:41270 - "GET /api/v1/jobs/f3f16c1c HTTP/1.1" 200 OK
-INFO:     127.0.0.1:41278 - "GET /api/v1/jobs/f3f16c1c HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48344 - "GET /api/v1/jobs/f3f16c1c HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48358 - "GET /api/v1/jobs/f3f16c1c HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48368 - "GET /api/v1/jobs/f3f16c1c HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48226 - "GET /api/v1/jobs/f3f16c1c HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48230 - "GET /api/v1/jobs/f3f16c1c HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48242 - "GET /api/v1/jobs/f3f16c1c/results.tsv HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48248 - "GET /api/v1/jobs/f3f16c1c/seq/RuBisCO_spinach_P00875 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:46910 - "GET /api/v1/jobs/f3f16c1c/seq/CA2_human_P00918 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34550 - "POST /api/v1/predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34554 - "GET /api/v1/predict/c14e7146-c033-4bae-86b1-b63639241167 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34562 - "GET /api/v1/predict/c14e7146-c033-4bae-86b1-b63639241167 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40250 - "GET /api/v1/predict/c14e7146-c033-4bae-86b1-b63639241167 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40256 - "GET /api/v1/predict/c14e7146-c033-4bae-86b1-b63639241167 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40270 - "GET /api/v1/predict/c14e7146-c033-4bae-86b1-b63639241167 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40284 - "GET /api/v1/predict/c14e7146-c033-4bae-86b1-b63639241167 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40294 - "GET /api/v1/predict/c14e7146-c033-4bae-86b1-b63639241167 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46376 - "GET /api/v1/predict/c14e7146-c033-4bae-86b1-b63639241167 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46382 - "GET /api/v1/predict/c14e7146-c033-4bae-86b1-b63639241167 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46394 - "GET /api/v1/predict/c14e7146-c033-4bae-86b1-b63639241167 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46410 - "GET /api/v1/predict/c14e7146-c033-4bae-86b1-b63639241167 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34662 - "GET /api/v1/predict/c14e7146-c033-4bae-86b1-b63639241167 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34684 - "POST /api/v1/batch HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34668 - "GET /api/v1/predict/c14e7146-c033-4bae-86b1-b63639241167 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43152 - "GET /api/v1/batch/fad5c65a-5acc-4e41-9023-3d46d69b11f9 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43162 - "GET /api/v1/batch/fad5c65a-5acc-4e41-9023-3d46d69b11f9 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43176 - "GET /api/v1/batch/fad5c65a-5acc-4e41-9023-3d46d69b11f9 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40712 - "GET /api/v1/batch/fad5c65a-5acc-4e41-9023-3d46d69b11f9 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40726 - "GET /api/v1/batch/fad5c65a-5acc-4e41-9023-3d46d69b11f9 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40742 - "GET /api/v1/batch/fad5c65a-5acc-4e41-9023-3d46d69b11f9 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40752 - "GET /api/v1/batch/fad5c65a-5acc-4e41-9023-3d46d69b11f9 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55346 - "GET /api/v1/batch/fad5c65a-5acc-4e41-9023-3d46d69b11f9 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55362 - "GET /api/v1/batch/fad5c65a-5acc-4e41-9023-3d46d69b11f9 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55378 - "GET /api/v1/batch/fad5c65a-5acc-4e41-9023-3d46d69b11f9 HTTP/1.1" 200 OK

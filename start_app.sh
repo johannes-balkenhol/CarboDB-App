@@ -30,6 +30,11 @@ export PREDICT_JOB_TIMEOUT="300"
 export PREDICT_RESULT_TTL="3600"
 export PREDICT_FAILURE_TTL="86400"
 
+export BATCH_QUEUE_NAME="batch"
+export BATCH_JOB_TIMEOUT="3600"
+export BATCH_RESULT_TTL="86400"
+export BATCH_FAILURE_TTL="86400"
+
 # === Frontend env used by vite.config.js ===
 export BACKEND_PORT="${BACKEND_PORT}"
 export FRONTEND_PORT="${FRONTEND_PORT}"
@@ -78,10 +83,10 @@ start_worker() {
     exit 1
   fi
 
-  echo "Starting RQ worker for queue '${PREDICT_QUEUE_NAME}'..."
+  echo "Starting RQ worker for queues '${PREDICT_QUEUE_NAME}' and '${BATCH_QUEUE_NAME}'..."
   cd "${APP_DIR}" || exit 1
 
-  nohup rq worker "${PREDICT_QUEUE_NAME}" --url "${REDIS_URL}" \
+  nohup rq worker "${PREDICT_QUEUE_NAME}" "${BATCH_QUEUE_NAME}" --url "${REDIS_URL}" \
     > "${LOG_DIR}/rq_worker.log" 2>&1 &
 
   echo $! > "${LOG_DIR}/rq_worker.pid"
@@ -116,7 +121,7 @@ stop_all() {
   echo "Stopping CarboDB app processes..."
 
   pkill -f "uvicorn app.main:app" 2>/dev/null && echo "killed uvicorn" || true
-  pkill -f "rq worker ${PREDICT_QUEUE_NAME}" 2>/dev/null && echo "killed RQ worker" || true
+  pkill -f "rq worker ${PREDICT_QUEUE_NAME} ${BATCH_QUEUE_NAME}" 2>/dev/null && echo "killed RQ worker" || true
   pkill -f "vite" 2>/dev/null && echo "killed vite" || true
 
   # Only stop Redis if this script started it and pid file exists

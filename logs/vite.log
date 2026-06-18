@@ -3,10 +3,13 @@
 > vite
 
 
-  VITE v5.4.11  ready in 963 ms
+  VITE v5.4.11  ready in 902 ms
 
   ➜  Local:   http://localhost:5174/
   ➜  Network: http://132.187.22.206:5174/
   ➜  Vue DevTools: Open http://localhost:5174/__devtools__/ as a separate window
   ➜  Vue DevTools: Press Alt(⌥)+Shift(⇧)+D in App to toggle the Vue DevTools
 
+4:43:34 PM [vite] http proxy error: /api/v1/predict
+Error: connect ECONNREFUSED 127.0.0.1:8091
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16)
