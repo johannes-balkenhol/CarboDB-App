@@ -136,7 +136,14 @@ def run_batch_job(job_id: str, input_path: str, mode: str, kingdom: str):
                             json.dump(r, sf)
                     except Exception:
                         pass
-                    pfam_str = ';'.join(r.get('pfam_hits', []))
+                    
+                    pfam_hits = r.get("pfam_hits", [])
+                    pfam_str = ";".join(
+                        h.get("accession") or h.get("target_name") or ""
+                        for h in pfam_hits
+                        if isinstance(h, dict)
+                    )
+
                     fout.write(
                         f"{seq_id}\t{r['sequence_length']}\t"
                         f"{r['is_carboxylase']}\t{r['carboxylase_probability']:.4f}\t"
@@ -146,6 +153,7 @@ def run_batch_job(job_id: str, input_path: str, mode: str, kingdom: str):
                         f"{pfam_str}\t{r.get('novelty_flag','')}\t"
                         f"{r.get('runtime_seconds','')}\n"
                     )
+
                     fout.flush()
                 except Exception as e:
                     fout.write(f"{seq_id}\t0\tERROR\t\t\t\t\t\t\t\t{str(e)[:100]}\n")
