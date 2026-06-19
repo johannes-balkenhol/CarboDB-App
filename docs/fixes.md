@@ -32,3 +32,11 @@ Added DELETE /api/v1/batch/{job_id} to cancel queued batch jobs.
 Added Delete button in frontend/src/views/AnalysisView.vue
 Added async function cancelPrediction().
 Added async function cancelBatchPrediction().
+
+## Loading sqlite cache 
+
+Added Browse_cache.py for app side cache loading
+loads db entries in app startup
+startup is a bit heavy but response faster
+added manual refresh point api/v1/browse/cache/refresh in browse.py
+

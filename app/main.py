@@ -9,6 +9,7 @@ from .startup import ModelStore, load_all_models
 from .routes.predict import router as predict_router
 from .routes.browse import router as browse_router
 from .routes.batch import router as batch_router
+from .browse_cache import BrowseCache, load_browse_cache
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 log = logging.getLogger(__name__)
@@ -21,6 +22,8 @@ async def lifespan(app: FastAPI):
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, load_all_models)
     log.info(f"Models loaded in {time.time()-t:.1f}s")
+    await loop.run_in_executor(None, load_browse_cache)
+    log.info("Browse cache ready")
     try:
         yield
     finally:
@@ -61,6 +64,9 @@ def health():
         "redis_ok": redis_ok,
         "redis_error": redis_error,
         "predict_queue": os.environ.get("PREDICT_QUEUE_NAME", "predict"),
+        "browse_cache_ready": BrowseCache.ready,
+        "browse_cache_rows": len(BrowseCache.rows),
+        "browse_cache_error": BrowseCache.error,
     }
 
 
