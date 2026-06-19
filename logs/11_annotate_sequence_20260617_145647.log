@@ -1,9 +1,0 @@
-2026-06-17 14:56:47  INFO      Log file: /bigstorage/users/projects/CarboDB-App-v2/logs/11_annotate_sequence_20260617_145647.log
-2026-06-17 14:56:47  INFO      Parsed 1 sequence(s)
-2026-06-17 14:56:47  INFO      ── Annotating: query (len=469) ──
-2026-06-17 14:56:47  INFO      Loading models...
-2026-06-17 14:56:49  INFO        Loaded model: binary_v5.json
-2026-06-17 14:56:50  INFO        Loaded model: ec_v5.json
-2026-06-17 14:56:50  INFO        Loaded model: km_v5_weighted.json
-2026-06-17 14:56:50  INFO      Computing composition features...
-2026-06-17 14:56:50  INFO      Running HMMER/Pfam scan...
