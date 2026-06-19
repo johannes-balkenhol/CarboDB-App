@@ -81,12 +81,12 @@ MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
         </button>
 
         <button
-          v-if="loading && predictJobId"
+          v-if="loading && (predictJobId || batchProgress?.jobId)"
           type="button"
           class="cancel-btn"
-          @click="cancelPrediction"
+          @click="cancelCurrentJob"
         >
-          Cancel prediction
+          Cancel {{ batchProgress?.jobId ? 'batch prediction' : 'prediction' }}
         </button>
       </div>
     </div>
@@ -194,6 +194,7 @@ const predictJobId = ref(null)
 const predictStatus = ref(null)
 const predictPollInterval = ref(null)
 const predictAbortController = ref(null)
+const batchAbortController = ref(null)
 
 const selectedMode = ref('standard')
 const selectedKingdom = ref('plant')
@@ -250,6 +251,41 @@ async function cancelPrediction() {
   loading.value = false
   predictStatus.value = 'cancelled'
   error.value = 'Prediction cancelled.'
+}
+
+async function cancelBatchPrediction() {
+  const jobId = batchProgress.value?.jobId
+
+  clearBatchPoll()
+
+  if (batchAbortController.value) {
+    batchAbortController.value.abort()
+    batchAbortController.value = null
+  }
+
+  if (jobId) {
+    try {
+      await fetch(`${API_URL}/api/v1/batch/${jobId}`, {
+        method: 'DELETE',
+      })
+    } catch (e) {
+      console.warn('Failed to cancel backend batch job:', e)
+    }
+  }
+
+  loading.value = false
+  batchProgress.value = batchProgress.value
+    ? { ...batchProgress.value, status: 'cancelled' }
+    : null
+  error.value = 'Batch prediction cancelled.'
+}
+
+async function cancelCurrentJob() {
+  if (batchProgress.value?.jobId) {
+    await cancelBatchPrediction()
+  } else {
+    await cancelPrediction()
+  }
 }
 
 async function predictSingle() {
@@ -413,6 +449,8 @@ async function predictBatch() {
   batchProgress.value = null
   clearBatchPoll()
 
+  batchAbortController.value = new AbortController()
+
   let mode = selectedMode.value || 'standard'
   if (mode !== 'fast' && mode !== 'standard') mode = 'standard'
   const kingdom = selectedKingdom.value || 'plant'
@@ -424,7 +462,11 @@ async function predictBatch() {
     formData.append('mode', mode)
     formData.append('kingdom', kingdom)
 
-    const submitRes = await fetch(`${API_URL}/api/v1/batch`, { method: 'POST', body: formData })
+    const submitRes = await fetch(`${API_URL}/api/v1/batch`, {
+      method: 'POST',
+      body: formData,
+      signal: batchAbortController.value.signal,
+    })
     if (!submitRes.ok) {
       const errText = await submitRes.text()
       throw new Error(`Submit failed (HTTP ${submitRes.status}): ${errText}`)
@@ -441,7 +483,9 @@ async function predictBatch() {
 
     batchPollInterval = setInterval(async () => {
     try {
-      const pollRes = await fetch(`${API_URL}/api/v1/batch/${jobId}`)
+      const pollRes = await fetch(`${API_URL}/api/v1/batch/${jobId}`, {
+        signal: batchAbortController.value?.signal,
+      })
 
       if (!pollRes.ok) {
         const errText = await pollRes.text()
@@ -489,15 +533,26 @@ async function predictBatch() {
 
       loadBatchResultsFromPayload(jobId, meta)
     } catch (e) {
+      if (e.name === 'AbortError') {
+        return
+      }
+
       clearBatchPoll()
       error.value = `Polling error: ${e.message}`
       loading.value = false
+      batchAbortController.value = null
     }
   }, 3000)
   } catch (e) {
+    if (e.name === 'AbortError') {
+      error.value = 'Batch prediction request cancelled'
+    } else {
+      error.value = `Request failed: ${e.message}`
+    }
+
     clearBatchPoll()
-    error.value = `Request failed: ${e.message}`
     loading.value = false
+    batchAbortController.value = null
   }
 }
 
@@ -733,6 +788,9 @@ onUnmounted(() => {
 
   if (predictAbortController.value) {
     predictAbortController.value.abort()
+  }
+  if (batchAbortController.value) {
+    batchAbortController.value.abort()
   }
 })
 </script>
