@@ -96,12 +96,13 @@ def _normalise_pfam_hits(pfam_hits):
 
 def get_similar_from_db(ec: str, km_uM: Optional[float], limit: int = 8) -> list[dict[str, Any]]:
     """
-    Get similar reviewed CarboDB sequences for frontend context.
+    Get same-EC database sequences that have experimental Km values.
 
-    Kept in pipeline/predict.py so queued worker tasks can return the same
-    result shape as the old synchronous /predict route.
+    This fills result["top_similar"] for /predict and batch details.
+    It is not true BLAST hit-list logic yet; it uses same EC class and
+    ranks references by closeness between predicted Km and experimental Km.
     """
-    db_path = os.environ.get("DB_PATH", "data/carbodb.sqlite")
+    db_path = os.environ.get("DB_PATH", "data/primary/carbodb.sqlite")
 
     if not os.path.exists(db_path):
         return []
@@ -113,38 +114,98 @@ def get_similar_from_db(ec: str, km_uM: Optional[float], limit: int = 8) -> list
 
         cur.execute(
             """
-            SELECT s.uniprot_id,
-                   s.organism,
-                   p.km_pred_mM * 1000 AS km_pred_uM,
-                   s.reviewed
+            SELECT
+                s.uniprot_id,
+                s.organism,
+                s.ec_number,
+                s.length,
+                s.reviewed,
+
+                p.km_pred_mM * 1000.0 AS db_predicted_km_uM,
+
+                COALESCE(kexp.km_experimental_mM, s.km_best_mM) AS km_experimental_mM,
+                COALESCE(kexp.km_experimental_mM, s.km_best_mM) * 1000.0 AS km_experimental_uM,
+                kexp.km_exp_substrate,
+                kexp.km_exp_source
+
             FROM sequences s
-            JOIN predictions p ON p.sequence_id = s.id
+
+            LEFT JOIN predictions p
+                ON p.sequence_id = s.id
+
+            LEFT JOIN (
+                SELECT
+                    sequence_id,
+                    MIN(km_value_mM) AS km_experimental_mM,
+                    substrate AS km_exp_substrate,
+                    source AS km_exp_source
+                FROM km_evidence
+                WHERE evidence_tier = 1
+                   OR LOWER(source) = 'brenda'
+                GROUP BY sequence_id
+            ) kexp
+                ON kexp.sequence_id = s.id
+
             WHERE s.label = 1
               AND s.ec_number = ?
-              AND p.km_pred_mM IS NOT NULL
-              AND s.reviewed = 1
-            ORDER BY RANDOM()
-            LIMIT ?
+              AND COALESCE(kexp.km_experimental_mM, s.km_best_mM) IS NOT NULL
+
+            LIMIT 300
             """,
-            (ec, limit),
+            (ec,),
         )
 
-        rows = cur.fetchall()
+        rows = [dict(r) for r in cur.fetchall()]
         conn.close()
 
-        return [
-            {
-                "uniprot_id": r["uniprot_id"],
-                "organism": r["organism"],
-                "km_predicted_uM": round(r["km_pred_uM"], 1) if r["km_pred_uM"] else None,
-                "km_experimental_uM": None,
-                "reviewed": bool(r["reviewed"]),
-            }
-            for r in rows
-        ]
+        import math
+
+        for r in rows:
+            exp_uM = r.get("km_experimental_uM")
+
+            if km_uM and exp_uM and km_uM > 0 and exp_uM > 0:
+                r["_distance"] = abs(math.log10(km_uM) - math.log10(exp_uM))
+            else:
+                r["_distance"] = 999.0
+
+            # Prefer reviewed entries if distances are similar/equal.
+            r["_reviewed_sort"] = 0 if r.get("reviewed") else 1
+
+        rows.sort(key=lambda r: (r["_distance"], r["_reviewed_sort"]))
+
+        out = []
+
+        for i, r in enumerate(rows[:limit], start=1):
+            out.append({
+                "rank": i,
+                "uniprot_id": r.get("uniprot_id"),
+                "organism": r.get("organism"),
+                "ec_number": r.get("ec_number"),
+                "length": r.get("length"),
+                "reviewed": bool(r.get("reviewed")),
+
+                "km_predicted_uM": round(km_uM, 1) if km_uM is not None else None,
+                "km_experimental_uM": (
+                    round(r["km_experimental_uM"], 1)
+                    if r.get("km_experimental_uM") is not None
+                    else None
+                ),
+                "km_exp_substrate": r.get("km_exp_substrate"),
+                "km_exp_source": r.get("km_exp_source") or "brenda",
+
+                # No true pairwise BLAST identity here yet.
+                "identity_pct": None,
+                "evalue": None,
+                "align_length": None,
+
+                "tier": "same_ec",
+                "tier_label": "same EC experimental Km",
+            })
+
+        return out
 
     except Exception:
-        log.exception("Failed to query similar sequences from DB")
+        log.exception("Failed to query experimental Km references from DB")
         return []
 
 def predict_sequence(sequence, mode="fast", kingdom="plant", seq_id="query"):
@@ -448,6 +509,14 @@ def run_batch_predict_job(
             "km_predicted_mM",
             "km_predicted_uM",
             "pfam_hits",
+
+            # Frontend expects these when parsing batch TSV
+            "nearest_uniprot",
+            "nearest_km_exp_uM",
+            "nearest_organism",
+            "nearest_pident",
+            "nearest_tier",
+
             "novelty_flag",
             "runtime_seconds",
         ]
@@ -465,6 +534,26 @@ def run_batch_predict_job(
                     seq_id=seq_id,
                 )
 
+                # Add experimental-Km references for batch results too.
+                if r.get("is_carboxylase") and r.get("ec_predicted"):
+                    r["top_similar"] = get_similar_from_db(
+                        r.get("ec_predicted"),
+                        r.get("km_predicted_uM"),
+                    )
+                else:
+                    r["top_similar"] = []
+
+                top_hit = r["top_similar"][0] if r["top_similar"] else None
+
+                r["nearest_neighbor"] = (
+                    {
+                        **top_hit,
+                        "km_experimental": top_hit.get("km_experimental_uM"),
+                    }
+                    if top_hit
+                    else None
+                )
+
                 pfam_str = pfam_hits_to_string(r.get("pfam_hits", []))
 
                 row = {
@@ -480,6 +569,14 @@ def run_batch_predict_job(
 
                 results.append(row)
 
+                nn = r.get("nearest_neighbor") or {}
+
+                nearest_uniprot = nn.get("uniprot_id") or ""
+                nearest_km_exp_uM = nn.get("km_experimental") or nn.get("km_experimental_uM") or ""
+                nearest_organism = nn.get("organism") or ""
+                nearest_pident = nn.get("identity_pct") or ""
+                nearest_tier = nn.get("tier") or ""
+
                 tsv_lines.append(
                     "\t".join([
                         seq_id,
@@ -491,6 +588,13 @@ def run_batch_predict_job(
                         str(r.get("km_predicted_mM") or ""),
                         str(r.get("km_predicted_uM") or ""),
                         pfam_str,
+
+                        str(nearest_uniprot),
+                        str(nearest_km_exp_uM),
+                        str(nearest_organism),
+                        str(nearest_pident),
+                        str(nearest_tier),
+
                         str(r.get("novelty_flag", "")),
                         str(r.get("runtime_seconds", "")),
                     ])
@@ -529,6 +633,13 @@ def run_batch_predict_job(
                         "",
                         "",
                         "",
+
+                        "",  # nearest_uniprot
+                        "",  # nearest_km_exp_uM
+                        "",  # nearest_organism
+                        "",  # nearest_pident
+                        "",  # nearest_tier
+
                         "",
                         str(exc)[:100],
                     ])

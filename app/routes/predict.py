@@ -138,32 +138,105 @@ def get_predict_job(job_id: str):
     return response
 
 def get_similar_from_db(ec: str, km_uM: Optional[float], limit: int = 8) -> list:
-    """Get similar sequences from CarboDB for context."""
-    db_path = os.environ.get("DB_PATH", "data/carbodb.sqlite")
+    """
+    Get same-EC experimental Km references from CarboDB.
+
+    Used by GET /predict/{job_id} after a prediction job finishes.
+    """
+    db_path = os.environ.get("DB_PATH", "data/primary/carbodb.sqlite")
+
     if not os.path.exists(db_path):
         return []
+
     try:
         conn = sqlite3.connect(db_path, timeout=10)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
+
         cur.execute("""
-            SELECT s.uniprot_id, s.organism, p.km_pred_mM*1000 as km_pred_uM,
-                   s.reviewed
+            SELECT
+                s.uniprot_id,
+                s.organism,
+                s.ec_number,
+                s.length,
+                s.reviewed,
+
+                COALESCE(kexp.km_experimental_mM, s.km_best_mM) AS km_experimental_mM,
+                COALESCE(kexp.km_experimental_mM, s.km_best_mM) * 1000.0 AS km_experimental_uM,
+                kexp.km_exp_substrate,
+                kexp.km_exp_source
+
             FROM sequences s
-            JOIN predictions p ON p.sequence_id = s.id
-            WHERE s.label=1 AND s.ec_number=?
-            AND p.km_pred_mM IS NOT NULL AND s.reviewed=1
-            ORDER BY RANDOM()
-            LIMIT ?
-        """, (ec, limit))
-        rows = cur.fetchall()
+
+            LEFT JOIN (
+                SELECT
+                    sequence_id,
+                    MIN(km_value_mM) AS km_experimental_mM,
+                    substrate AS km_exp_substrate,
+                    source AS km_exp_source
+                FROM km_evidence
+                WHERE evidence_tier = 1
+                   OR LOWER(source) = 'brenda'
+                GROUP BY sequence_id
+            ) kexp
+                ON kexp.sequence_id = s.id
+
+            WHERE s.label = 1
+              AND s.ec_number = ?
+              AND COALESCE(kexp.km_experimental_mM, s.km_best_mM) IS NOT NULL
+
+            LIMIT 300
+        """, (ec,))
+
+        rows = [dict(r) for r in cur.fetchall()]
         conn.close()
-        return [{'uniprot_id': r['uniprot_id'],
-                 'organism': r['organism'],
-                 'km_predicted_uM': round(r['km_pred_uM'], 1) if r['km_pred_uM'] else None,
-                 'km_experimental_uM': None,
-                 'reviewed': bool(r['reviewed'])} for r in rows]
+
+        import math
+
+        for r in rows:
+            exp_uM = r.get("km_experimental_uM")
+
+            if km_uM and exp_uM and km_uM > 0 and exp_uM > 0:
+                r["_distance"] = abs(math.log10(km_uM) - math.log10(exp_uM))
+            else:
+                r["_distance"] = 999.0
+
+            r["_reviewed_sort"] = 0 if r.get("reviewed") else 1
+
+        rows.sort(key=lambda r: (r["_distance"], r["_reviewed_sort"]))
+
+        out = []
+
+        for i, r in enumerate(rows[:limit], start=1):
+            out.append({
+                "rank": i,
+                "uniprot_id": r.get("uniprot_id"),
+                "organism": r.get("organism"),
+                "ec_number": r.get("ec_number"),
+                "length": r.get("length"),
+                "reviewed": bool(r.get("reviewed")),
+
+                "km_predicted_uM": round(km_uM, 1) if km_uM is not None else None,
+                "km_experimental_uM": (
+                    round(r["km_experimental_uM"], 1)
+                    if r.get("km_experimental_uM") is not None
+                    else None
+                ),
+                "km_exp_substrate": r.get("km_exp_substrate"),
+                "km_exp_source": r.get("km_exp_source") or "brenda",
+
+                "identity_pct": None,
+                "evalue": None,
+                "align_length": None,
+
+                "tier": "same_ec",
+                "tier_label": "same EC experimental Km",
+            })
+
+        return out
+
     except Exception as e:
+        print(f"get_similar_from_db failed: {e}")
         return []
     
 # cancellation endpoint

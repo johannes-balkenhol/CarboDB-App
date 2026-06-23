@@ -40,3 +40,10 @@ loads db entries in app startup
 startup is a bit heavy but response faster
 added manual refresh point api/v1/browse/cache/refresh in browse.py
 
+## Fixed SQLiteDB connection
+
+Changes to connection in browse.py and browse_cache.py
+Changes in pipeline/predict.py and routes/predict.py in def get_similar_from_db
+
+## To DO:
+Blast info for browser detials is still missing.
