@@ -51,6 +51,16 @@ from pathlib import Path
 
 import numpy as np
 
+try:
+    from .composition import extract_all as extract_display_features
+except ImportError:
+    from composition import extract_all as extract_display_features
+
+try:
+    from .shap_summary import build_shap_payload
+except ImportError:
+    from shap_summary import build_shap_payload
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from config import CFG, PATHS, ROOT, setup_logging
 
@@ -616,8 +626,10 @@ def annotate_sequence(seq_id: str,
         "km_ec_used":             None,
         "features_used":          [],
         "pfam_hits":              [],
+        "features_computed":      {},
         "warnings":               warnings,
         "runtime_seconds":        None,
+        "shap":                    None,
     }
 
     # Load models & feature name lists
@@ -648,6 +660,16 @@ def annotate_sequence(seq_id: str,
     log.info("Computing composition features...")
     comp_feats = compute_composition(seq_clean)
     result["features_used"].append("composition")
+
+    # Display-oriented features for ResultDetail.vue:
+    # sequence motifs + physicochemical properties.
+    try:
+        display_feats = extract_display_features(seq_id, seq_clean)
+        display_feats.pop("cdb_id", None)
+        result["features_computed"].update(display_feats)
+    except Exception as e:
+        log.warning("Display feature extraction failed: %s", e)
+        result["warnings"].append(f"Display feature extraction failed: {e}")
 
     # Step 2: Pfam
     log.info("Running HMMER/Pfam scan...")
@@ -704,6 +726,7 @@ def annotate_sequence(seq_id: str,
     else:
         result["warnings"].append("EC model not available")
 
+
     # Step 8: Km prediction (only if carboxylase + EC is in trainable set)
     if is_carb and models["km"] is not None:
         ec_for_km = result["ec_predicted"]
@@ -719,6 +742,13 @@ def annotate_sequence(seq_id: str,
             result["warnings"].append(
                 f"Km prediction not available for EC {ec_for_km} "
                 f"(not in trainable set: {KM_TRAINABLE_EC})")
+            
+    
+    # new result for shap values 
+    if result.get("is_carboxylase") and result.get("ec_predicted"):
+        result["shap"] = build_shap_payload(result.get("ec_predicted"))
+    else:
+        result["shap"] = None
 
     result["runtime_seconds"] = round(time.time() - t0, 2)
     return result

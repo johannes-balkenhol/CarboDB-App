@@ -1,1 +1,0 @@
-{"job_id": "4debe1cc", "status": "completed", "mode": "standard", "kingdom": "plant", "email": null, "n_sequences": 2, "processed": 2, "created_at": "2026-06-17T13:36:46.339085", "input_file": "jobs/4debe1cc/input.faa", "result_file": "jobs/4debe1cc/results.tsv", "started_at": "2026-06-17T13:36:46.341625", "completed_at": "2026-06-17T13:37:15.094812"}

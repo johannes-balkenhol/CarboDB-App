@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Query, HTTPException
 from typing import Optional
 import sqlite3, os
+import json
 
 from ..browse_cache import BrowseCache, load_browse_cache
+from ..db_km import fetch_sequence_km_detail, get_same_ec_experimental_km_neighbors 
+from app.pipeline.shap_summary import build_shap_payload
 
 router = APIRouter(tags=["browse"])
 
@@ -147,26 +150,26 @@ def browse(
 
         filtered.append(row)
 
-        if sort == "km_asc":
-            filtered.sort(
-                key=lambda r: (
-                    r.get("km_predicted_uM") is None,
-                    r.get("km_predicted_uM") if r.get("km_predicted_uM") is not None else float("inf"),
-                )
+    if sort == "km_asc":
+        filtered.sort(
+            key=lambda r: (
+                r.get("km_predicted_uM") is None,
+                r.get("km_predicted_uM") if r.get("km_predicted_uM") is not None else float("inf"),
             )
-        elif sort == "km_desc":
-            filtered.sort(
-                key=lambda r: (
-                    r.get("km_predicted_uM") is None,
-                    -(r.get("km_predicted_uM") or 0),
-                )
+        )
+    elif sort == "km_desc":
+        filtered.sort(
+            key=lambda r: (
+                r.get("km_predicted_uM") is None,
+                -(r.get("km_predicted_uM") or 0),
             )
-        elif sort == "length_asc":
-            filtered.sort(key=lambda r: r.get("length") or 0)
-        elif sort == "length_desc":
-            filtered.sort(key=lambda r: -(r.get("length") or 0))
-        elif sort == "uniprot":
-            filtered.sort(key=lambda r: r.get("uniprot_id") or "")
+        )
+    elif sort == "length_asc":
+        filtered.sort(key=lambda r: r.get("length") or 0)
+    elif sort == "length_desc":
+        filtered.sort(key=lambda r: -(r.get("length") or 0))
+    elif sort == "uniprot":
+        filtered.sort(key=lambda r: r.get("uniprot_id") or "")
             
     
 
@@ -225,6 +228,7 @@ def browse(
 @router.get("/db/seq/{uniprot_id}")
 def db_sequence_detail(uniprot_id: str):
     db_path = os.environ.get("DB_PATH", "data/primary/carbodb.sqlite")
+
     if not os.path.exists(db_path):
         raise HTTPException(status_code=404, detail="Database not found")
 
@@ -232,76 +236,11 @@ def db_sequence_detail(uniprot_id: str):
         conn = sqlite3.connect(db_path, timeout=30)
         conn.row_factory = sqlite3.Row
 
-        row = conn.execute("""
-            SELECT
-                s.id AS sequence_id,
-                s.cdb_id,
-                s.uniprot_id,
-                s.organism,
-                s.ec_number AS ec_known,
-                s.label,
-                s.source,
-                s.sequence,
-                s.length,
-                s.reviewed,
-                s.km_best_mM,
+        result = fetch_sequence_km_detail(conn, uniprot_id)
 
-                p.is_co2_pred,
-                p.co2_prob,
-                p.ec_pred AS ec_predicted,
-                p.ec_prob AS ec_confidence,
-                p.km_pred_mM,
-                p.km_pred_log10,
-                p.km_pred_mM * 1000.0 AS km_predicted_uM,
-
-                COALESCE(kexp.km_experimental_mM, s.km_best_mM) AS km_experimental_mM,
-                COALESCE(kexp.km_experimental_mM, s.km_best_mM) * 1000.0 AS km_experimental_uM,
-                kexp.km_exp_substrate,
-                kexp.km_exp_source
-
-            FROM sequences s
-
-            LEFT JOIN predictions p
-                ON p.sequence_id = s.id
-
-            LEFT JOIN (
-                SELECT
-                    sequence_id,
-                    MIN(km_value_mM) AS km_experimental_mM,
-                    substrate AS km_exp_substrate,
-                    source AS km_exp_source
-                FROM km_evidence
-                WHERE evidence_tier = 1
-                   OR LOWER(source) = 'brenda'
-                GROUP BY sequence_id
-            ) kexp
-                ON kexp.sequence_id = s.id
-
-            WHERE s.uniprot_id = ?
-            LIMIT 1
-        """, (uniprot_id,)).fetchone()
-
-        if row is None:
+        if result is None:
             conn.close()
             raise HTTPException(status_code=404, detail="Sequence not found")
-
-        result = dict(row)
-
-        result["id"] = result.get("uniprot_id")
-        result["sequence_length"] = result.get("length")
-        result["reviewed"] = bool(result.get("reviewed"))
-
-        if result.get("is_co2_pred") is not None:
-            result["is_carboxylase"] = bool(result.get("is_co2_pred"))
-        else:
-            result["is_carboxylase"] = bool(result.get("label") == 1)
-
-        result["carboxylase_probability"] = result.get("co2_prob")
-        result["km_predicted_log10"] = result.get("km_pred_log10")
-        result["mode"] = "db_lookup"
-        result["kingdom"] = None
-        result["features_used"] = []
-        result["runtime_seconds"] = 0
 
         ec_for_neighbors = result.get("ec_predicted") or result.get("ec_known")
 
@@ -313,102 +252,66 @@ def db_sequence_detail(uniprot_id: str):
             limit=8,
         )
 
+        # added shap code to fetch SHAP payload for the sequence
+
+        # Ensure DB detail response has frontend-compatible Pfam hits.
+        # ResultDetail.vue expects result["pfam_hits"] with accession fields.
+        try:
+            seq_id = result.get("sequence_id") or result.get("id")
+
+            dom_row = conn.execute(
+                """
+                SELECT pfam_hits_json, pfam_n_hits
+                FROM features_domains
+                WHERE uniprot_id = ? OR sequence_id = ?
+                LIMIT 1
+                """,
+                (uniprot_id, seq_id),
+            ).fetchone()
+
+            pfam_accessions = []
+            if dom_row:
+                # Works whether row is sqlite Row or dict-like
+                pfam_json = dom_row["pfam_hits_json"] if "pfam_hits_json" in dom_row.keys() else dom_row[0]
+
+                if pfam_json:
+                    pfam_accessions = json.loads(pfam_json)
+
+            result["pfam_hits"] = [
+                {
+                    "accession": acc,
+                    "name": acc,
+                    "description": None,
+                }
+                for acc in pfam_accessions
+            ]
+
+            result["pfam_accessions"] = pfam_accessions
+
+        except Exception as e:
+            result["pfam_hits"] = []
+            result["pfam_accessions"] = []
+            result.setdefault("warnings", []).append(f"Pfam annotations unavailable: {e}")
+        
+        ec_for_shap = (
+            result.get("ec_predicted")
+            or result.get("ec_known")
+            or result.get("ec")
+            or result.get("ec_number")
+        )
+
+        is_carb = bool(result.get("is_carboxylase")) or result.get("label") == 1
+
+        result["shap"] = build_shap_payload(ec_for_shap) if is_carb and ec_for_shap else None
+
         conn.close()
         return result
 
     except HTTPException:
         raise
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-
-def get_same_ec_experimental_km_neighbors(
-    conn: sqlite3.Connection,
-    ec: Optional[str],
-    exclude_uniprot: Optional[str],
-    km_predicted_uM: Optional[float],
-    limit: int = 8,
-) -> list:
-    if not ec:
-        return []
-
-    rows = conn.execute("""
-        SELECT
-            s.uniprot_id,
-            s.organism,
-            s.ec_number,
-            s.length,
-            s.reviewed,
-
-            COALESCE(kexp.km_experimental_mM, s.km_best_mM) AS km_experimental_mM,
-            COALESCE(kexp.km_experimental_mM, s.km_best_mM) * 1000.0 AS km_experimental_uM,
-            kexp.km_exp_substrate,
-            kexp.km_exp_source
-
-        FROM sequences s
-
-        LEFT JOIN (
-            SELECT
-                sequence_id,
-                MIN(km_value_mM) AS km_experimental_mM,
-                substrate AS km_exp_substrate,
-                source AS km_exp_source
-            FROM km_evidence
-            WHERE evidence_tier = 1
-               OR LOWER(source) = 'brenda'
-            GROUP BY sequence_id
-        ) kexp
-            ON kexp.sequence_id = s.id
-
-        WHERE s.uniprot_id != ?
-          AND s.ec_number = ?
-          AND COALESCE(kexp.km_experimental_mM, s.km_best_mM) IS NOT NULL
-
-        LIMIT 200
-    """, (exclude_uniprot or "", ec)).fetchall()
-
-    import math
-
-    neighbors = []
-    for r in rows:
-        d = dict(r)
-        exp_uM = d.get("km_experimental_uM")
-
-        if km_predicted_uM and exp_uM and km_predicted_uM > 0 and exp_uM > 0:
-            d["_distance"] = abs(math.log10(km_predicted_uM) - math.log10(exp_uM))
-        else:
-            d["_distance"] = 999.0
-
-        # reviewed first if distance is equal
-        d["_reviewed_sort"] = 0 if d.get("reviewed") else 1
-        neighbors.append(d)
-
-    neighbors.sort(key=lambda d: (d["_distance"], d["_reviewed_sort"]))
-
-    out = []
-    for i, d in enumerate(neighbors[:limit], start=1):
-        out.append({
-            "rank": i,
-            "uniprot_id": d.get("uniprot_id"),
-            "organism": d.get("organism"),
-            "ec_number": d.get("ec_number"),
-            "length": d.get("length"),
-            "reviewed": bool(d.get("reviewed")),
-
-            "km_experimental_uM": d.get("km_experimental_uM"),
-            "km_exp_substrate": d.get("km_exp_substrate"),
-            "km_exp_source": d.get("km_exp_source") or "brenda",
-
-            # No true BLAST hit-list in current schema, so do not fake these.
-            "identity_pct": None,
-            "evalue": None,
-            "align_length": None,
-
-            "tier": "same_ec",
-            "tier_label": "same EC experimental Km",
-        })
-
-    return out
 
 
 @router.post("/browse/cache/refresh")
@@ -424,20 +327,34 @@ def refresh_browse_cache():
 
 @router.get("/stats")
 def stats():
-    db_path = os.environ.get("DB_PATH", "data/carbodb.sqlite")
-    if not os.path.exists(db_path):
-        return {"error": "Database not found"}
-    try:
-        conn = sqlite3.connect(db_path, timeout=10)
-        total = conn.execute(
-            "SELECT COUNT(*) FROM sequences WHERE label=1").fetchone()[0]
-        reviewed = conn.execute(
-            "SELECT COUNT(*) FROM sequences WHERE label=1 AND reviewed=1").fetchone()[0]
-        ec_dist = conn.execute(
-            "SELECT ec_number, COUNT(*) as n FROM sequences "
-            "WHERE label=1 GROUP BY ec_number ORDER BY n DESC LIMIT 10").fetchall()
-        conn.close()
-        return {"total_sequences": total, "reviewed": reviewed,
-                "ec_distribution": {r[0]: r[1] for r in ec_dist}}
-    except Exception as e:
-        return {"error": str(e)}
+    if not BrowseCache.ready:
+        return {
+            "total_sequences": 0,
+            "reviewed": 0,
+            "ec_distribution": {},
+            "all_sequences": 0,
+            "predicted_carboxylases": 0,
+            "with_experimental_km": 0,
+            "with_experimental_km_cached": 0,
+            "ec_classes": 0,
+            "ec_classes_cached": 0,
+            "swissprot_curated": 0,
+            "cache_rows": 0,
+            "cache": {
+                "ready": BrowseCache.ready,
+                "rows": len(BrowseCache.rows),
+                "loaded_at": BrowseCache.loaded_at,
+                "error": BrowseCache.error or "Browse cache not ready",
+            },
+        }
+
+    payload = dict(BrowseCache.stats)
+
+    payload["cache"] = {
+        "ready": BrowseCache.ready,
+        "rows": len(BrowseCache.rows),
+        "loaded_at": BrowseCache.loaded_at,
+        "error": BrowseCache.error,
+    }
+
+    return payload

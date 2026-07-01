@@ -161,8 +161,8 @@ def get_similar_from_db(ec: str, km_uM: Optional[float], limit: int = 8) -> list
                 s.length,
                 s.reviewed,
 
-                COALESCE(kexp.km_experimental_mM, s.km_best_mM) AS km_experimental_mM,
-                COALESCE(kexp.km_experimental_mM, s.km_best_mM) * 1000.0 AS km_experimental_uM,
+                kexp.km_experimental_mM AS km_experimental_mM,
+                kexp.km_experimental_mM * 1000.0 AS km_experimental_uM,
                 kexp.km_exp_substrate,
                 kexp.km_exp_source
 
@@ -183,7 +183,7 @@ def get_similar_from_db(ec: str, km_uM: Optional[float], limit: int = 8) -> list
 
             WHERE s.label = 1
               AND s.ec_number = ?
-              AND COALESCE(kexp.km_experimental_mM, s.km_best_mM) IS NOT NULL
+              AND kexp.km_experimental_mM IS NOT NULL
 
             LIMIT 300
         """, (ec,))
@@ -223,7 +223,9 @@ def get_similar_from_db(ec: str, km_uM: Optional[float], limit: int = 8) -> list
                     else None
                 ),
                 "km_exp_substrate": r.get("km_exp_substrate"),
-                "km_exp_source": r.get("km_exp_source") or "brenda",
+                "km_exp_source": r.get("km_exp_source"),
+                "has_direct_experimental_km": True,
+                "km_source_type": "experimental_table",
 
                 "identity_pct": None,
                 "evalue": None,

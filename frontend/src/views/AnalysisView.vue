@@ -692,7 +692,11 @@ async function viewDetail(result) {
   try {
     // Prefer the cached per-seq JSON the batch worker saved (instant — no re-predict)
     let data = null
-    if (result._jobId && (result.features_used || result.pfam_hits || result.ec_probabilities)) {
+    // if (result._jobId && (result.features_used || result.pfam_hits || result.ec_probabilities)) {
+    //   selectedResult.value = result
+    //   return
+    // }
+    if (result.features_computed || result.shap) {
       selectedResult.value = result
       return
     }

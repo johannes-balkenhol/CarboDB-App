@@ -69,7 +69,8 @@
 
     <!-- ═══ HEADLINE Km COMPARISON ═══════════════════════════════════════ -->
     <!-- Surfaces predicted Km vs the BLAST top-hit's experimental Km right at the top -->
-    <section v-if="topKmHit" class="rd-section rd-km-headline">
+     <!-- why? why experimental Km is for the top hit and not the entry itself? -->
+    <!-- <section v-if="topKmHit" class="rd-section rd-km-headline">
       <h3 class="rd-section-title">Predicted vs experimental Km</h3>
       <div class="rd-km-compare rd-km-compare-headline">
         <div class="rd-km-box rd-km-experimental">
@@ -100,7 +101,54 @@
           {{ foldChangeLabel(topKmHit) }}
         </div>
       </div>
+    </section> -->
+
+    <!-- ═══ HEADLINE Km COMPARISON ═══════════════════════════════════════ -->
+    <!-- For DB lookup, compare the selected sequence's predicted Km against its own experimental Km. -->
+    <section v-if="ownExperimentalKm != null || topKmHit" class="rd-section rd-km-headline">
+      <h3 class="rd-section-title">Predicted vs experimental Km</h3>
+
+      <div class="rd-km-compare rd-km-compare-headline">
+        <div class="rd-km-box rd-km-experimental">
+          <div class="rd-km-label">Predicted K<sub>m</sub></div>
+          <div class="rd-km-value">
+            {{ result.km_predicted_uM?.toFixed(1) ?? '—' }}
+            <span class="rd-km-unit">µM</span>
+          </div>
+          <div class="rd-km-sub">selected sequence</div>
+        </div>
+
+        <div class="rd-km-arrow">↔</div>
+
+        <div class="rd-km-box rd-km-predicted">
+          <div class="rd-km-label">
+            Experimental K<sub>m</sub>
+            <span v-if="ownExperimentalSubstrate">({{ ownExperimentalSubstrate }})</span>
+          </div>
+          <div class="rd-km-value">
+            {{ ownExperimentalKm?.toFixed(1) ?? '—' }}
+            <span class="rd-km-unit">µM</span>
+          </div>
+          <div class="rd-km-sub">
+            <template v-if="ownExperimentalKm != null">
+              selected DB sequence · {{ ownExperimentalSource || 'BRENDA' }}
+            </template>
+            <template v-else-if="topKmHit">
+              no own experimental Km; nearest reference shown below
+            </template>
+          </div>
+        </div>
+
+        <div
+          v-if="ownFoldChange !== null"
+          class="rd-km-delta"
+          :class="deltaClass(ownFoldChange)"
+        >
+          {{ ownFoldChangeLabel }}
+        </div>
+      </div>
     </section>
+
 
     <!-- ═══ EC PROBABILITY DISTRIBUTION ══════════════════════════════════ -->
     <section v-if="sortedEcProbs.length > 0" class="rd-section">
@@ -654,6 +702,37 @@ function deltaClass(fc) {
 const topKmHit = computed(() => {
   const sims = props.result?.top_similar || []
   return sims.find(s => s?.km_experimental_uM != null && s.km_experimental_uM > 0) || null
+})
+
+const ownExperimentalKm = computed(() => {
+  const v = props.result?.km_experimental_uM
+  return v != null && v > 0 ? Number(v) : null
+})
+
+const ownExperimentalSubstrate = computed(() => {
+  return props.result?.km_exp_substrate || null
+})
+
+const ownExperimentalSource = computed(() => {
+  return props.result?.km_exp_source || null
+})
+
+const ownFoldChange = computed(() => {
+  const pred = Number(props.result?.km_predicted_uM)
+  const exp = ownExperimentalKm.value
+
+  if (!pred || !exp || pred <= 0 || exp <= 0) return null
+  return pred >= exp ? pred / exp : exp / pred
+})
+
+const ownFoldChangeLabel = computed(() => {
+  if (ownFoldChange.value === null) return ''
+
+  const pred = Number(props.result?.km_predicted_uM)
+  const exp = ownExperimentalKm.value
+  const dir = pred >= exp ? 'higher' : 'lower'
+
+  return `Δ = ${ownFoldChange.value.toFixed(1)}× ${dir}`
 })
 
 // ─── Feature interpretation tooltips ─────────────────────────────────────

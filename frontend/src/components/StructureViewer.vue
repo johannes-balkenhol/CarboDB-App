@@ -125,10 +125,14 @@ export default {
     this.initStage();
   },
   beforeUnmount() {
+    window.removeEventListener("resize", this.handleResize)
+
     if (this.stage) {
-      this.stage.dispose();
-      this.stage = null;
+      this.stage.dispose()
+      this.stage = null
     }
+
+    this.structureComponent = null
   },
   methods: {
     async initStage() {

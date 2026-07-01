@@ -4,6 +4,8 @@ import time
 import logging
 from typing import Optional
 
+from .db_km import KM_SELECT_SQL, KM_JOIN_SQL, normalise_sequence_km_row
+
 log = logging.getLogger(__name__)
 
 
@@ -11,7 +13,104 @@ class BrowseCache:
     ready: bool = False
     loaded_at: Optional[float] = None
     rows: list[dict] = []
+    stats: dict = {}
     error: Optional[str] = None
+
+def build_browse_stats(conn: sqlite3.Connection, rows: list[dict]) -> dict:
+    """
+    Build stats once during browse-cache loading.
+
+    rows are the cached browse rows, currently restricted to s.label = 1.
+    Full-database counts are queried directly once here.
+    """
+
+    # Full database stats
+    all_sequences = conn.execute(
+        "SELECT COUNT(*) FROM sequences"
+    ).fetchone()[0]
+
+    with_experimental_km_all = conn.execute(
+        """
+        SELECT COUNT(DISTINCT s.id)
+        FROM sequences s
+        JOIN km_evidence ke ON ke.sequence_id = s.id
+        WHERE ke.km_value_mM IS NOT NULL
+          AND (ke.evidence_tier = 1 OR LOWER(ke.source) = 'brenda')
+        """
+    ).fetchone()[0]
+
+    ec_classes_all = conn.execute(
+        """
+        SELECT COUNT(DISTINCT ec_number)
+        FROM sequences
+        WHERE ec_number IS NOT NULL
+          AND ec_number != ''
+        """
+    ).fetchone()[0]
+
+    swissprot_curated_all = conn.execute(
+        """
+        SELECT COUNT(*)
+        FROM sequences
+        WHERE reviewed = 1
+        """
+    ).fetchone()[0]
+
+    # Browse/cache-specific stats: currently label=1 rows only
+    cached_carboxylases = len(rows)
+
+    predicted_carboxylases = sum(
+        1 for r in rows
+        if bool(r.get("is_carboxylase"))
+    )
+
+    cached_with_experimental_km = sum(
+        1 for r in rows
+        if r.get("km_experimental_uM") is not None
+    )
+
+    cached_reviewed = sum(
+        1 for r in rows
+        if bool(r.get("reviewed"))
+    )
+
+    ec_distribution = {}
+    ec_values = []
+
+    for r in rows:
+        ec = r.get("ec_number") or r.get("ec_known") or r.get("ec_predicted")
+        if not ec:
+            continue
+
+        ec_values.append(ec)
+        ec_distribution[ec] = ec_distribution.get(ec, 0) + 1
+
+    ec_distribution = dict(
+        sorted(
+            ec_distribution.items(),
+            key=lambda x: x[1],
+            reverse=True,
+        )[:10]
+    )
+
+    return {
+        # Old compatibility fields
+        # In the old route, total_sequences meant label=1, not all DB rows.
+        "total_sequences": cached_carboxylases,
+        "reviewed": cached_reviewed,
+        "ec_distribution": ec_distribution,
+
+        # New stat-card fields
+        "all_sequences": all_sequences,
+        "predicted_carboxylases": predicted_carboxylases,
+        "with_experimental_km": with_experimental_km_all,
+        "with_experimental_km_cached": cached_with_experimental_km,
+        "ec_classes": ec_classes_all,
+        "ec_classes_cached": len(set(ec_values)),
+        "swissprot_curated": swissprot_curated_all,
+
+        "cache_rows": len(rows),
+    }
 
 
 def load_browse_cache():
@@ -26,6 +125,7 @@ def load_browse_cache():
     BrowseCache.ready = False
     BrowseCache.error = None
     BrowseCache.rows = []
+    BrowseCache.stats = {}
 
     if not os.path.exists(db_path):
         BrowseCache.error = f"Database not found: {db_path}"
@@ -34,17 +134,15 @@ def load_browse_cache():
 
     t0 = time.time()
 
-    query = """
+    query = f"""
         SELECT
             s.id AS sequence_id,
             s.cdb_id,
             s.uniprot_id,
             s.organism,
 
-            -- known / original EC from sequence table
             s.ec_number AS ec_known,
 
-            -- model-predicted EC from predictions table
             p.ec_pred AS ec_predicted,
             p.ec_prob AS ec_confidence,
             p.co2_prob AS carboxylase_probability,
@@ -55,40 +153,15 @@ def load_browse_cache():
             s.reviewed,
             s.source,
 
-            -- predicted Km from model, stored in mM
-            p.km_pred_mM,
-            p.km_pred_log10,
-            p.km_pred_mM * 1000.0 AS km_predicted_uM,
+            {KM_SELECT_SQL},
 
-            -- experimental Km from best sequence field or BRENDA evidence
-            COALESCE(kexp.km_experimental_mM, s.km_best_mM) AS km_experimental_mM,
-            COALESCE(kexp.km_experimental_mM, s.km_best_mM) * 1000.0 AS km_experimental_uM,
-            kexp.km_exp_substrate,
-            kexp.km_exp_source,
-
-            -- BLAST summary fields available in current schema
             fb.blast_best_pident,
             fb.blast_best_evalue,
             fb.blast_best_ec,
             fb.blast_has_hit
 
         FROM sequences s
-
-        LEFT JOIN predictions p
-            ON p.sequence_id = s.id
-
-        LEFT JOIN (
-            SELECT
-                sequence_id,
-                MIN(km_value_mM) AS km_experimental_mM,
-                substrate AS km_exp_substrate,
-                source AS km_exp_source
-            FROM km_evidence
-            WHERE evidence_tier = 1
-            OR LOWER(source) = 'brenda'
-            GROUP BY sequence_id
-        ) kexp
-            ON kexp.sequence_id = s.id
+        {KM_JOIN_SQL}
 
         LEFT JOIN features_blast fb
             ON fb.sequence_id = s.id
@@ -101,22 +174,14 @@ def load_browse_cache():
         conn.row_factory = sqlite3.Row
 
         rows = conn.execute(query).fetchall()
-        conn.close()
-
         rows = [dict(r) for r in rows]
 
         for r in rows:
-            r["reviewed"] = bool(r.get("reviewed"))
+            normalise_sequence_km_row(r)
 
-            # Frontend boolean: use prediction if available, otherwise fall back to label.
-            if r.get("is_carboxylase_pred") is not None:
-                r["is_carboxylase"] = bool(r.get("is_carboxylase_pred"))
-            else:
-                r["is_carboxylase"] = bool(r.get("label") == 1)
+        BrowseCache.stats = build_browse_stats(conn, rows)
 
-            # Backward-compatible aliases for the old static frontend.
-            r["ec_number"] = r.get("ec_predicted") or r.get("ec_known")
-            r["km_uM"] = r.get("km_predicted_uM")
+        conn.close()
 
         BrowseCache.rows = sorted(
             rows,

@@ -1,1 +1,0 @@
-{"job_id": "27e80455", "status": "completed", "mode": "standard", "kingdom": "plant", "email": null, "n_sequences": 2, "processed": 2, "created_at": "2026-06-18T11:21:16.489318", "input_file": "jobs/27e80455/input.faa", "result_file": "jobs/27e80455/results.tsv", "started_at": "2026-06-18T11:21:16.492885", "completed_at": "2026-06-18T11:21:46.444276"}

@@ -1,28 +1,32 @@
 <template>
   <div class="database-view">
-    <!-- ═══ Stats banner ═══════════════════════════════════════════════════ -->
-    <div v-if="stats" class="stats-banner">
-      <div class="stat-card">
-        <div class="stat-value">{{ stats.total_sequences.toLocaleString() }}</div>
-        <div class="stat-label">Total sequences</div>
-      </div>
-      <div class="stat-card stat-card-primary">
-        <div class="stat-value">{{ stats.predicted_carboxylases.toLocaleString() }}</div>
-        <div class="stat-label">Predicted carboxylases</div>
-      </div>
-      <div class="stat-card stat-card-accent">
-        <div class="stat-value">{{ stats.with_experimental_km.toLocaleString() }}</div>
-        <div class="stat-label">With experimental Km</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">{{ stats.ec_classes_total }}</div>
-        <div class="stat-label">EC classes</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">{{ stats.reviewed_count.toLocaleString() }}</div>
-        <div class="stat-label">SwissProt-curated</div>
-      </div>
+  <!-- ═══ Stats banner ═══════════════════════════════════════════════════ -->
+  <div v-if="stats" class="stats-banner">
+    <div class="stat-card">
+      <div class="stat-value">{{ fmtInt(stats?.all_sequences ?? stats?.total_sequences) }}</div>
+      <div class="stat-label">Total sequences</div>
     </div>
+
+    <div class="stat-card stat-card-primary">
+      <div class="stat-value">{{ fmtInt(stats?.predicted_carboxylases) }}</div>
+      <div class="stat-label">Predicted carboxylases</div>
+    </div>
+
+    <div class="stat-card stat-card-accent">
+      <div class="stat-value">{{ fmtInt(stats?.with_experimental_km) }}</div>
+      <div class="stat-label">With experimental Km</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-value">{{ fmtInt(stats?.ec_classes ?? stats?.ec_classes_total) }}</div>
+      <div class="stat-label">EC classes</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-value">{{ fmtInt(stats?.swissprot_curated ?? stats?.reviewed_count ?? stats?.reviewed) }}</div>
+      <div class="stat-label">SwissProt-curated</div>
+    </div>
+  </div>
 
     <!-- ═══ Quick-pick example queries ═════════════════════════════════════ -->
     <div class="quick-picks">
@@ -47,7 +51,7 @@
       <select v-model="filters.ec" class="filter-select" @change="search(0)">
         <option value="">All EC classes</option>
         <option v-for="ec in ecOptions" :key="ec.ec_number" :value="ec.ec_number">
-          {{ ec.ec_number }} — {{ ec.ec_name }} ({{ ec.count.toLocaleString() }})
+          {{ ec.ec_number }} — {{ ec.ec_name }} ({{ fmtInt(ec?.count) }})
         </option>
       </select>
       <button class="search-btn" @click="search(0)">Search</button>
@@ -67,7 +71,7 @@
         Predicted carboxylase
       </label>
       <span class="result-summary" v-if="totalResults > 0">
-        {{ totalResults.toLocaleString() }} matches
+        {{ fmtInt(totalResults) }} matches
         <span class="page-info">
           (showing {{ offset + 1 }}–{{ Math.min(offset + results.length, totalResults) }})
         </span>
@@ -157,7 +161,12 @@ import ResultDetail from '../components/ResultDetail.vue'
 const API_URL = import.meta.env.VITE_API_URL || ''
 
 // ─── reactive state ──────────────────────────────────────────────────────
-const stats = ref(null)
+const stats = ref({
+  total_sequences: 0,
+  predicted_carboxylases: 0,
+  with_experimental_km: 0,
+  reviewed_count: 0,
+})
 const results = ref([])
 const totalResults = ref(0)
 const offset = ref(0)
@@ -263,6 +272,11 @@ function resetFilters(opts = {}) {
   filters.is_carboxylase = true
   filters.sort = 'default'
   if (!opts.keepDefaults) search(0)
+}
+
+function fmtInt(value) {
+  const n = Number(value)
+  return Number.isFinite(n) ? n.toLocaleString() : '0'
 }
 
 // ─── sort helpers ────────────────────────────────────────────────────────

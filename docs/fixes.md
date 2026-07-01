@@ -44,6 +44,23 @@ added manual refresh point api/v1/browse/cache/refresh in browse.py
 
 Changes to connection in browse.py and browse_cache.py
 Changes in pipeline/predict.py and routes/predict.py in def get_similar_from_db
+Fixed the predict path so experimental Km no not None, by updating get_similar_from_db() in app/routes/predict.py.
+Sdded experimental-Km enrichment after predict_sequence().
+
+## Fixed vite app unresponsiveness
+
+In DatabaseView.vue changed lines with toLocalString() eg.,
+<div class="stat-value">{{ fmtInt(stats?.total_sequences) }}</div>
+
+
 
 ## To DO:
 Blast info for browser detials is still missing.
+
+Workspace: /storage/users/job37yv/Projects/CarboDB-App-v2/ (you're in carbodb group — log out + back in if groups doesn't show it). Pull main, read docs/2026-06-24_AMAN_REPORT.md for start/stop/logs. Test the running app in browser (VPN on): http://132.187.22.206:5173/ → Analysis → click RuBisCO example → Analyze. Should return EC 4.1.1.39 after ~30-90s.
+
+
+Use ec_known/ec_number before ec_predicted in browse.py, so database entries are explained using their curated EC annotation.
+Also filter out pfam_n_hits from shap_summary.py, because it is too generic and makes weak support look misleadingly moderate.
+
+change front end how details are shown very non user friendly
