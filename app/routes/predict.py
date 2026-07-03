@@ -121,13 +121,8 @@ def get_predict_job(job_id: str):
 
         result = payload.get("result")
 
-        if result and result.get("ec_predicted") and result.get("is_carboxylase"):
-            result["top_similar"] = get_similar_from_db(
-                result["ec_predicted"],
-                result.get("km_predicted_uM"),
-            )
-        elif result:
-            result["top_similar"] = []
+        if result:
+            result.setdefault("top_similar", [])
 
         response["status"] = "completed"
         response["result"] = result

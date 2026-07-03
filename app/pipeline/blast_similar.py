@@ -116,7 +116,7 @@ def run_blast_similar(
     # Resolve paths
     root = Path(os.environ.get("CARBODB_ROOT", ".")).resolve()
     sqlite_path = Path(db_path or os.environ.get("DB_PATH", "data/primary/carbodb.sqlite"))
-    mfest_path = Path(manifest_path or "data/blast_ec_dbs/manifest.json")
+    mfest_path = Path(manifest_path or "data/blast_ec_dbs_exp/manifest.json")
 
     if not sqlite_path.is_absolute():
         sqlite_path = root / sqlite_path
