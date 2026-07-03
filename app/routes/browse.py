@@ -244,13 +244,23 @@ def db_sequence_detail(uniprot_id: str):
 
         ec_for_neighbors = result.get("ec_predicted") or result.get("ec_known")
 
-        result["top_similar"] = get_same_ec_experimental_km_neighbors(
+        experimental_km_neighbors = get_same_ec_experimental_km_neighbors(
             conn=conn,
             ec=ec_for_neighbors,
             exclude_uniprot=result.get("uniprot_id"),
             km_predicted_uM=result.get("km_predicted_uM"),
             limit=8,
+            include_query_prediction=True,
         )
+
+        result["experimental_km_neighbors"] = experimental_km_neighbors
+
+        # temporary frontend compatibility
+        result["top_similar"] = experimental_km_neighbors
+
+        # explicit placeholder until real BLAST is implemented
+        result["nearest_km_blast_hits"] = []
+        result["nearest_blast_hit"] = None
 
         # added shap code to fetch SHAP payload for the sequence
 
@@ -268,6 +278,44 @@ def db_sequence_detail(uniprot_id: str):
                 """,
                 (uniprot_id, seq_id),
             ).fetchone()
+
+            # Composition / physicochemical features for DB detail view.
+            # Prediction results already expose these as result["features_computed"];
+            # DB detail must use the same key so ResultDetail.vue can render the shared panel.
+            try:
+                seq_id = result.get("sequence_id") or result.get("id")
+
+                comp_row = conn.execute(
+                    """
+                    SELECT *
+                    FROM features_composition
+                    WHERE uniprot_id = ? OR sequence_id = ?
+                    LIMIT 1
+                    """,
+                    (uniprot_id, seq_id),
+                ).fetchone()
+
+                if comp_row:
+                    comp = dict(comp_row)
+
+                    # Keep only real feature values for the frontend.
+                    for meta_key in ("id", "sequence_id", "uniprot_id"):
+                        comp.pop(meta_key, None)
+
+                    result["features_computed"] = {
+                        k: v for k, v in comp.items()
+                        if v is not None
+                    }
+
+                    result.setdefault("features_used", [])
+                    if "composition" not in result["features_used"]:
+                        result["features_used"].append("composition")
+
+            except Exception as e:
+                result.setdefault("features_computed", {})
+                result.setdefault("warnings", []).append(
+                    f"Composition/physicochemical features unavailable: {e}"
+                )
 
             pfam_accessions = []
             if dom_row:

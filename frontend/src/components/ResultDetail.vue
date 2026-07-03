@@ -191,9 +191,42 @@
 
     <!-- ═══NEW PFAM DOMAINS ═════════════════════════════════════════════════ -->
     <section v-if="pfamNormalized.length > 0" class="rd-section">
-      <h3 class="rd-section-title">Pfam domains ({{ pfamNormalized.length }})</h3>
+      <h3 class="rd-section-title">
+        {{ isDbLookup ? 'Pfam feature hits' : 'Pfam domains' }}
+        ({{ pfamNormalized.length }})
 
-      <table class="rd-table">
+        <span v-if="isDbLookup" class="rd-section-sub">
+          accession-level Pfam families detected for this sequence
+        </span>
+
+        <span v-else class="rd-section-sub">
+          detailed HMMER/Pfam hits from this prediction
+        </span>
+      </h3>
+
+      <!-- DB lookup: only accession-level Pfam data exists in SQLite -->
+      <div v-if="isDbLookup" class="rd-pfam-compact">
+
+
+        <div class="rd-pfam-chip-grid">
+          <a
+            v-for="acc in pfamAccessions"
+            :key="acc"
+            :href="'https://www.ebi.ac.uk/interpro/entry/pfam/' + acc"
+            target="_blank"
+            rel="noopener"
+            class="rd-pfam-chip"
+          >
+            <span class="rd-pfam-chip-sub">Pfam </span>
+  
+            <span class="rd-pfam-chip-main">{{ acc }}</span>
+            
+          </a>
+        </div>
+      </div>
+
+      <!-- Prediction result: keep detailed HMMER/Pfam table -->
+      <table v-else class="rd-table">
         <thead>
           <tr>
             <th>Accession</th>
@@ -257,11 +290,41 @@
     </section>
 
     <!-- ═══ SHAP FEATURE IMPORTANCE ══════════════════════════════════════ -->
-    <section v-if="hasShap" class="rd-section">
-      <h3 class="rd-section-title">
-        Feature importance
-        <span class="rd-section-sub">from training-time SHAP analysis</span>
-      </h3>
+    <section v-if="hasShap" class="rd-section rd-collapsible-section">
+      <button
+        type="button"
+        class="rd-collapse-header"
+        :class="{ open: showFeatureImportance }"
+        @click="showFeatureImportance = !showFeatureImportance"
+      >
+        <span class="rd-collapse-left">
+          <span class="rd-collapse-icon">
+            {{ showFeatureImportance ? '−' : '+' }}
+          </span>
+
+          <span class="rd-collapse-text">
+            <span class="rd-collapse-title">
+              Feature importance
+            </span>
+            <span class="rd-collapse-subtitle">
+              From training-time SHAP analysis
+            </span>
+          </span>
+        </span>
+
+        <span class="rd-collapse-action">
+          {{ showFeatureImportance ? 'Collapse' : 'Click to expand' }}
+        </span>
+      </button>
+
+
+      <div v-if="!showFeatureImportance" class="rd-collapse-preview">
+        SHAP feature-importance data available for
+        <strong>{{ shapTabs.map(t => t.label).join(' and ') }}</strong>.
+        Open to inspect influential domains, motifs, physicochemical features, and embeddings.
+      </div>
+
+      <div v-if="showFeatureImportance" class="rd-collapsible-body">
 
       <!-- Tabs -->
       <div class="rd-shap-tabs">
@@ -347,62 +410,142 @@
           (No training samples in this class.)
         </span>
       </div>
+      </div>
     </section>
 
-    <!-- NEAREST EXPERIMENTAL-Km NEIGHBORS (BLAST) -->
-    <section class="rd-section">
-      <h3 class="rd-section-title">
-        Nearest hits with experimental Km
-        <span class="rd-section-sub">BLAST against sequences with BRENDA/SwissProt measurements</span>
-      </h3>
+    <!-- SAME-EC EXPERIMENTAL-Km REFERENCES -->
+    <section class="rd-section rd-collapsible-section">
+      <button
+        type="button"
+        class="rd-collapse-header"
+        :class="{ open: showKmReferences }"
+        @click="showKmReferences = !showKmReferences"
+      >
+        <span class="rd-collapse-left">
+          <span class="rd-collapse-icon">
+            {{ showKmReferences ? '−' : '+' }}
+          </span>
 
-      <div v-if="!result.top_similar || result.top_similar.length === 0" class="rd-neighbor-empty">
-        No experimental-Km reference available for EC <strong>{{ result.ec_predicted || '—' }}</strong>.
-        Either this EC class has no measured Km values in CarboDB, or your sequence
-        did not BLAST-match any of them above the significance threshold.
+          <span class="rd-collapse-text">
+            <span class="rd-collapse-title">
+              Database entries with same EC and direct experimental K<sub>m</sub>
+            </span>
+            <span class="rd-collapse-subtitle">
+              Same-EC CarboDB entries with direct measured values
+            </span>
+          </span>
+        </span>
+
+        <span class="rd-collapse-action">
+          {{ showKmReferences ? 'Collapse' : 'Click to expand' }}
+        </span>
+      </button>
+
+      <div v-if="!showKmReferences" class="rd-collapse-preview">
+        <template v-if="kmReferenceHits.length > 0">
+          {{ kmReferenceHits.length }} same-EC experimental K<sub>m</sub>
+          reference{{ kmReferenceHits.length === 1 ? '' : 's' }} available for comparison.
+        </template>
+
+        <template v-else>
+          No direct experimental-K<sub>m</sub> reference available for this EC class.
+        </template>
       </div>
 
-      <div v-else class="rd-neighbor-list">
-        <div v-for="sim in result.top_similar"
-             :key="sim.uniprot_id"
-             class="rd-neighbor-card"
-             :class="'rd-tier-' + (sim.tier || 'unknown')">
+      <div v-if="showKmReferences" class="rd-collapsible-body">
+        <div v-if="!kmReferenceHits || kmReferenceHits.length === 0" class="rd-neighbor-empty">
+          No direct experimental-K<sub>m</sub> reference available for EC
+          <strong>{{ result.ec_predicted || result.ec_known || result.ec_number || '—' }}</strong>.
+          This EC class may have no measured K<sub>m</sub> values in CarboDB.
+        </div>
 
+      <div v-else class="rd-neighbor-list">
+        <div
+          v-for="sim in kmReferenceHits"
+          :key="sim.uniprot_id"
+          class="rd-neighbor-card"
+          :class="'rd-tier-' + (sim.tier || 'same_ec_experimental_km')"
+        >
           <div class="rd-neighbor-head">
             <span class="rd-neighbor-rank">#{{ sim.rank }}</span>
-            <a :href="'https://www.uniprot.org/uniprotkb/' + sim.uniprot_id"
-               target="_blank" rel="noopener" class="rd-link rd-neighbor-uid">
+
+            <a
+              :href="'https://www.uniprot.org/uniprotkb/' + sim.uniprot_id"
+              target="_blank"
+              rel="noopener"
+              class="rd-link rd-neighbor-uid"
+            >
               {{ sim.uniprot_id }}
               <span class="rd-external">↗</span>
             </a>
+
             <span class="rd-neighbor-org">{{ sim.organism || 'unknown organism' }}</span>
-            <span class="rd-neighbor-tier">{{ sim.tier_label || sim.tier }}</span>
+
+            <span class="rd-neighbor-tier">
+              {{ sim.tier_label || 'same EC experimental Km' }}
+            </span>
+
+            <span
+              v-if="sim.has_direct_experimental_km || sim.km_source_type === 'experimental_table'"
+              class="rd-neighbor-tier"
+            >
+              direct experimental Km
+            </span>
+
+            <span
+              v-if="sim.km_exp_source"
+              class="rd-neighbor-tier"
+            >
+              source: {{ sim.km_exp_source }}
+            </span>
           </div>
 
-          <div class="rd-neighbor-identity">
-            <div class="rd-identity-bar">
-              <div class="rd-identity-fill"
-                   :style="{ width: (sim.identity_pct || 0) + '%' }"></div>
+          <!-- Only show BLAST identity/e-value if real BLAST fields exist -->
+          <div
+            v-if="sim.identity_pct != null || sim.evalue != null || sim.align_length != null"
+            class="rd-neighbor-identity"
+          >
+            <div v-if="sim.identity_pct != null" class="rd-identity-bar">
+              <div
+                class="rd-identity-fill"
+                :style="{ width: sim.identity_pct + '%' }"
+              ></div>
             </div>
+
             <span class="rd-identity-label">
-              {{ sim.identity_pct?.toFixed(1) ?? '?' }}% identity
+              <template v-if="sim.identity_pct != null">
+                {{ sim.identity_pct.toFixed(1) }}% identity
+              </template>
+
               <span class="rd-identity-meta">
-                (e={{ formatEvalue(sim.evalue) }},
-                {{ sim.align_length }} aa aligned)
+                <template v-if="sim.evalue != null">
+                  e={{ formatEvalue(sim.evalue) }}
+                </template>
+                <template v-if="sim.align_length != null">
+                  <span v-if="sim.evalue != null"> · </span>{{ sim.align_length }} aa aligned
+                </template>
               </span>
             </span>
           </div>
 
+          <div v-else class="rd-neighbor-identity rd-neighbor-reference-note">
+            Same-EC experimental Km reference; BLAST similarity is not available for this row.
+          </div>
+
           <div class="rd-km-compare">
             <div class="rd-km-box rd-km-experimental">
-              <div class="rd-km-label">Experimental K<sub>m</sub><span v-if="sim.km_exp_substrate">
-                ({{ sim.km_exp_substrate }})</span></div>
+              <div class="rd-km-label">
+                Experimental K<sub>m</sub>
+                <span v-if="sim.km_exp_substrate">({{ sim.km_exp_substrate }})</span>
+              </div>
               <div class="rd-km-value">
                 {{ sim.km_experimental_uM?.toFixed(1) ?? '—' }}
                 <span class="rd-km-unit">µM</span>
               </div>
             </div>
+
             <div class="rd-km-arrow">↔</div>
+
             <div class="rd-km-box rd-km-predicted">
               <div class="rd-km-label">Predicted K<sub>m</sub></div>
               <div class="rd-km-value">
@@ -410,13 +553,17 @@
                 <span class="rd-km-unit">µM</span>
               </div>
             </div>
-            <div v-if="foldChange(sim) !== null"
-                 class="rd-km-delta"
-                 :class="deltaClass(foldChange(sim))">
+
+            <div
+              v-if="foldChange(sim) !== null"
+              class="rd-km-delta"
+              :class="deltaClass(foldChange(sim))"
+            >
               {{ foldChangeLabel(sim) }}
             </div>
           </div>
         </div>
+      </div>
       </div>
     </section>
 
@@ -451,6 +598,10 @@ const props = defineProps({
 defineEmits(['close'])
 
 const shapTab = ref('ec_classification')
+
+// collapsable information for database entries
+const showFeatureImportance = ref(false)
+const showKmReferences = ref(false)
 
 // ─── Formatting helpers ──────────────────────────────────────────────────
 function formatPct(p) {
@@ -545,6 +696,15 @@ const pfamNormalized = computed(() => {
   })
 })
 
+// for pfam onyl db
+
+const isDbLookup = computed(() => props.result?.mode === 'db_lookup')
+
+const pfamAccessions = computed(() => {
+  return (props.result.pfam_hits || [])
+    .map(h => typeof h === 'string' ? h : h.accession)
+    .filter(Boolean)
+})
 
 // ─── Motif interpretation ────────────────────────────────────────────────
 // The pipeline computes 7 EC-specific regex motifs. Surface them with labels.
@@ -697,11 +857,20 @@ function deltaClass(fc) {
 }
 
 
-// Top BLAST hit that has an experimental Km (used for the headline comparison block).
-// Looks at top_similar (already sorted by identity desc) and picks the first entry with a Km.
+// Same-EC experimental Km references.
+// These are not BLAST hits unless identity_pct/evalue/align_length are present.
+const kmReferenceHits = computed(() => {
+  return (
+    props.result?.experimental_km_neighbors ||
+    props.result?.top_similar ||
+    []
+  )
+})
+
 const topKmHit = computed(() => {
-  const sims = props.result?.top_similar || []
-  return sims.find(s => s?.km_experimental_uM != null && s.km_experimental_uM > 0) || null
+  return kmReferenceHits.value.find(
+    s => s?.km_experimental_uM != null && s.km_experimental_uM > 0
+  ) || null
 })
 
 const ownExperimentalKm = computed(() => {
@@ -1059,6 +1228,60 @@ const matchSummary = computed(() => {
 .rd-link:hover { text-decoration: underline; }
 .rd-mono { font-family: 'Monaco', 'SF Mono', 'Menlo', monospace; font-size: 12px; }
 
+.rd-pfam-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rd-pfam-note {
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.rd-pfam-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+  gap: 8px;
+}
+
+.rd-pfam-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f0fff4;
+  border: 1px solid #e2e8f0;
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+}
+
+.rd-pfam-chip:hover {
+  background: #f8fafc;
+  border-color: #10983473;
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+
+.rd-pfam-chip-main {
+  color: #48bb78;
+  font-family: 'Monaco', 'SF Mono', 'Menlo', monospace;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.rd-pfam-chip-sub {
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+}
+
 /* ═══ Motif grid ═════════════════════════════════════════════════════════ */
 .rd-motif-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px;
@@ -1164,6 +1387,123 @@ const matchSummary = computed(() => {
 .rd-shap-empty {
   padding: 20px; text-align: center; color: #a0aec0; font-style: italic;
   background: #f7fafc; border-radius: 8px; font-size: 13px;
+}
+
+.rd-collapsible-section {
+  padding: 0;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.rd-collapse-header {
+  width: 100%;
+  border: none;
+  background: #f8fafc;
+  padding: 18px 28px;
+  margin: 0;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+}
+
+.rd-collapse-header:hover {
+  background: #eef2ff;
+  box-shadow: inset 3px 0 0 #6366f1;
+}
+
+.rd-collapse-header.open {
+  background: #f1f5f9;
+  box-shadow: inset 3px 0 0 #4f46e5;
+}
+
+.rd-collapse-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.rd-collapse-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #e0e7ff;
+  color: #4f46e5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.rd-collapse-header.open .rd-collapse-icon {
+  background: #4f46e5;
+  color: #ffffff;
+}
+
+.rd-collapse-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.rd-collapse-title {
+  color: #4a5568;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+.rd-collapse-subtitle {
+  color: #a0aec0;
+  font-size: 13px;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.rd-collapse-action {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #c7d2fe;
+  color: #4f46e5;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.rd-collapse-header:hover .rd-collapse-action {
+  background: #4f46e5;
+  color: #ffffff;
+  border-color: #4f46e5;
+}
+
+.rd-collapse-preview {
+  margin: 14px 28px 20px;
+  padding: 13px 16px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.rd-collapsible-body {
+  padding: 22px 28px 26px;
 }
 
 /* ═══ Footer ═════════════════════════════════════════════════════════════ */
@@ -1341,5 +1681,14 @@ const matchSummary = computed(() => {
 .rd-match-absent  { background: #fed7d7; color: #742a2a; }
 .rd-match-value   { background: #e2e8f0; color: #4a5568; }
 .rd-match-unknown { background: #f7fafc; color: #a0aec0; }
+
+.rd-neighbor-reference-note {
+  color: #718096;
+  font-size: 12px;
+  font-style: italic;
+  background: #f7fafc;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
 
 </style>

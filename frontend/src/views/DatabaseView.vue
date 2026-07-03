@@ -145,10 +145,27 @@
     </div>
 
     <!-- ═══ Detail modal — reuses ResultDetail component ═══════════════════ -->
-    <div v-if="selectedDetail" class="detail-modal-overlay" @click.self="selectedDetail = null">
+    <div
+      v-if="selectedDetail || detailLoading"
+      class="detail-modal-overlay"
+      @click.self="!detailLoading && (selectedDetail = null)"
+    >
       <div class="detail-modal">
-        <button class="detail-close" @click="selectedDetail = null">×</button>
-        <ResultDetail :result="selectedDetail" />
+        <button
+          class="detail-close"
+          @click="selectedDetail = null; detailLoading = false"
+        >
+          ×
+        </button>
+
+        <div v-if="detailLoading" class="detail-loading">
+          Loading full sequence details…
+        </div>
+
+        <ResultDetail
+          v-else-if="selectedDetail"
+          :result="selectedDetail"
+        />
       </div>
     </div>
   </div>
@@ -174,6 +191,7 @@ const limit = 50
 const loading = ref(false)
 const hasSearched = ref(false)
 const selectedDetail = ref(null)
+const detailLoading = ref(false)
 
 const filters = reactive({
   q: '',
@@ -231,25 +249,23 @@ async function search(newOffset) {
 
 // ─── interaction ─────────────────────────────────────────────────────────
 async function openDetail(row) {
-  selectedDetail.value = { ...row, _loading: true }
+  detailLoading.value = true
+  selectedDetail.value = null
+
   try {
-    const res = await fetch(`${API_URL}/api/v1/db/seq/${row.uniprot_id}`)
+    const res = await fetch(`${API_URL}/api/v1/db/seq/${encodeURIComponent(row.uniprot_id)}`)
+
     if (res.ok) {
       selectedDetail.value = await res.json()
     } else {
-      // Fall back: keep the row data so the modal at least shows the basics
-      selectedDetail.value = {
-        ...row,
-        id: row.uniprot_id,
-        sequence_length: row.length,
-      }
+      console.error(`Failed to load details for ${row.uniprot_id}`)
+      selectedDetail.value = null
     }
   } catch (e) {
-    selectedDetail.value = {
-      ...row,
-      id: row.uniprot_id,
-      sequence_length: row.length,
-    }
+    console.error('detail fetch failed', e)
+    selectedDetail.value = null
+  } finally {
+    detailLoading.value = false
   }
 }
 
@@ -544,6 +560,12 @@ function sortArrow(col) {
   color: #64748b;
   cursor: pointer;
   z-index: 1;
+}
+.detail-loading {
+  padding: 80px 24px;
+  text-align: center;
+  color: #64748b;
+  font-size: 15px;
 }
 .detail-close:hover { color: #0f172a; }
 

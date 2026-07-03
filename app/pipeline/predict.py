@@ -13,6 +13,7 @@ from typing import Any, Dict, Optional
 import numpy as np
 
 from ..startup import ModelStore, EC_NAMES, KM_EC_CLASSES
+from .blast_similar import run_blast_similar
 
 log = logging.getLogger(__name__)
 
@@ -406,10 +407,19 @@ def run_predict_job(
         )
 
         if include_similar and result.get("ec_predicted") and result.get("is_carboxylase"):
-            result["top_similar"] = get_similar_from_db(
-                result["ec_predicted"],
-                result.get("km_predicted_uM"),
-            )
+            try:
+                result["top_similar"] = run_blast_similar(
+                    sequence=sequence,
+                    ec_predicted=result["ec_predicted"],
+                    limit=8,
+                    manifest_path=os.environ.get(
+                        "BLAST_EXP_MANIFEST",
+                        "data/blast_ec_dbs_exp/manifest.json",
+                    ),
+                )
+            except Exception as exc:
+                log.warning("BLAST nearest-hit lookup failed: %s", exc)
+                result["top_similar"] = []
         else:
             result["top_similar"] = []
 
