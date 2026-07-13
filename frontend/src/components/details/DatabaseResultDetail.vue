@@ -34,7 +34,7 @@
     <!-- ═══ PREDICTION SUMMARY — 3 top-line scores ═══════════════════════ -->
     <section class="rd-section rd-summary">
       <div class="rd-metric">
-        <div class="rd-metric-label">CO₂ probability</div>
+        <div class="rd-metric-label">Carboxylase probability</div>
         <div class="rd-metric-value" :class="probClass(result.carboxylase_probability)">
           {{ formatPct(result.carboxylase_probability) }}
         </div>
@@ -228,6 +228,108 @@
           <div class="rd-phys-label">{{ p.label }}</div>
           <div class="rd-phys-value">{{ p.display }}</div>
         </div>
+      </div>
+    </section>
+
+    <!-- ═══ DATABASE ENTRY DETAILS ═══════════════════════════════════════ -->
+    <section class="rd-section">
+      <h3 class="rd-section-title">Entry details</h3>
+
+      <div class="rd-db-info-grid">
+        <div class="rd-db-info-cell">
+          <div class="rd-db-info-label">CarboDB ID</div>
+          <div class="rd-db-info-value rd-mono">
+            {{ result.cdb_id || '—' }}
+          </div>
+        </div>
+
+        <div class="rd-db-info-cell">
+        <div class="rd-db-info-label">UniProt ID</div>
+        <div class="rd-db-info-value rd-mono">
+          <a
+            v-if="result.uniprot_id"
+            :href="`https://www.uniprot.org/uniprotkb/${result.uniprot_id}`"
+            target="_blank"
+            rel="noopener"
+            class="rd-link"
+          >
+            {{ result.uniprot_id }}
+            <span class="rd-external">↗</span>
+          </a>
+
+          <span v-else>—</span>
+        </div>
+      </div>
+
+        <div class="rd-db-info-cell">
+          <div class="rd-db-info-label">Organism</div>
+          <div class="rd-db-info-value">
+            {{ result.organism || '—' }}
+          </div>
+        </div>
+
+        <div class="rd-db-info-cell">
+          <div class="rd-db-info-label">Known EC class</div>
+          <div class="rd-db-info-value rd-mono">
+            {{ result.ec_known || result.ec_number || '—' }}
+          </div>
+        </div>
+
+        <div class="rd-db-info-cell">
+          <div class="rd-db-info-label">Predicted EC class</div>
+          <div class="rd-db-info-value rd-mono">
+            {{ result.ec_predicted || '—' }}
+          </div>
+        </div>
+
+        <div class="rd-db-info-cell">
+          <div class="rd-db-info-label">Source</div>
+          <div class="rd-db-info-value">
+            {{ result.source || '—' }}
+          </div>
+        </div>
+
+        <div class="rd-db-info-cell">
+          <div class="rd-db-info-label">Reviewed</div>
+          <div class="rd-db-info-value">
+            {{ result.reviewed ? 'Yes' : 'No' }}
+          </div>
+        </div>
+
+        <div class="rd-db-info-cell">
+          <div class="rd-db-info-label">Sequence length</div>
+          <div class="rd-db-info-value">
+            {{ result.length || result.sequence_length || result.sequence?.length || '—' }} aa
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ AMINO-ACID SEQUENCE ═══════════════════════════════════════════ -->
+    <section v-if="result.sequence" class="rd-section">
+      <h3 class="rd-section-title">
+        Amino-acid sequence
+        <span class="rd-section-sub">
+          {{ result.sequence.length }} aa
+        </span>
+      </h3>
+
+      <div class="rd-sequence-box">
+        <div class="rd-sequence-toolbar">
+          <span class="rd-sequence-meta">
+            {{ result.uniprot_id || result.cdb_id || 'database sequence' }}
+          </span>
+
+          <button
+            type="button"
+            class="rd-sequence-copy"
+            @click="copySequence"
+          >
+            {{ sequenceCopied ? 'Copied' : 'Copy sequence' }}
+          </button>
+        </div>
+
+        <pre class="rd-sequence-text">{{ formattedSequence }}</pre>
       </div>
     </section>
 
@@ -689,6 +791,29 @@ const physProps = computed(() => {
     .filter(meta => meta.key in f && f[meta.key] != null)
     .map(meta => ({ key: meta.key, label: meta.label, display: meta.fmt(Number(f[meta.key])) }))
 })
+
+// ----- entry details (db_lookup mode) -----
+const sequenceCopied = ref(false)
+
+const formattedSequence = computed(() => {
+  const seq = props.result?.sequence || ''
+  return seq.match(/.{1,150}/g)?.join('\n') || ''
+})
+
+async function copySequence() {
+  const seq = props.result?.sequence || ''
+  if (!seq) return
+
+  try {
+    await navigator.clipboard.writeText(seq)
+    sequenceCopied.value = true
+    setTimeout(() => {
+      sequenceCopied.value = false
+    }, 1200)
+  } catch (e) {
+    console.error('Failed to copy sequence', e)
+  }
+}
 
 // ─── SHAP tabs ───────────────────────────────────────────────────────────
 const hasShap = computed(() => !!props.result.shap)
@@ -1436,6 +1561,89 @@ const matchSummary = computed(() => {
 
 .rd-collapsible-body {
   padding: 22px 28px 26px;
+}
+
+/* ═══ ENtry Details ════════════════════════════════════════ */
+
+.rd-db-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.rd-db-info-cell {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 10px 12px;
+}
+
+.rd-db-info-label {
+  font-size: 0.76rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.rd-db-info-value {
+  font-size: 0.95rem;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.rd-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.rd-sequence-box {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.rd-sequence-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.rd-sequence-meta {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.rd-sequence-copy {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.rd-sequence-copy:hover {
+  background: #f1f5f9;
+}
+
+.rd-sequence-text {
+  margin: 0;
+  padding: 14px;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #334155;
 }
 
 /* ═══ Footer ═════════════════════════════════════════════════════════════ */

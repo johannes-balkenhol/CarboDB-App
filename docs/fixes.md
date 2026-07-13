@@ -52,6 +52,16 @@ Sdded experimental-Km enrichment after predict_sequence().
 In DatabaseView.vue changed lines with toLocalString() eg.,
 <div class="stat-value">{{ fmtInt(stats?.total_sequences) }}</div>
 
+## Details view
+
+Fixed prediction/detail rendering by splitting the shared detail view into prediction vs database detail components while keeping ResultDetail.vue as a dispatcher.
+
+Restored real BLAST nearest-hit behavior for predictions: backend top_similar now comes from run_blast_similar, and routes/predict.py no longer overwrites it with same-EC Km references.
+
+Removed the misleading BLAST/same-EC section.S 
+
+Added database entry metadata such as UniProt ID, CarboDB ID, organism, known/predicted EC, source, reviewed status, length, and amino-acid sequence with copy/link support.
+
 
 
 ## To DO:
@@ -64,3 +74,6 @@ Use ec_known/ec_number before ec_predicted in browse.py, so database entries are
 Also filter out pfam_n_hits from shap_summary.py, because it is too generic and makes weak support look misleadingly moderate.
 
 change front end how details are shown very non user friendly
+
+
+fixing the database EC dropdown

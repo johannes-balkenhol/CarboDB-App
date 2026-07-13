@@ -64,7 +64,7 @@ MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
 
         <button @click="analyze" :disabled="loading" class="predict-btn">
           <span v-if="!loading">
-            🔬 Analyze {{ detectedSeqCount >= 2 ? `${detectedSeqCount} sequences` : 'Sequence' }}
+            Analyze {{ detectedSeqCount >= 2 ? `${detectedSeqCount} sequences` : 'Sequence' }}
           </span>
 
           <span v-else-if="batchProgress">
@@ -889,7 +889,7 @@ textarea:focus {
 .predict-btn {
   margin-top: 15px;
   padding: 12px 30px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #234d81;
   color: white;
   border: none;
   border-radius: 8px;

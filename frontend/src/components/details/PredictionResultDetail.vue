@@ -34,7 +34,7 @@
     <!-- ═══ PREDICTION SUMMARY — 3 top-line scores ═══════════════════════ -->
     <section class="rd-section rd-summary">
       <div class="rd-metric">
-        <div class="rd-metric-label">CO₂ probability</div>
+        <div class="rd-metric-label">Carboxylase probability</div>
         <div class="rd-metric-value" :class="probClass(result.carboxylase_probability)">
           {{ formatPct(result.carboxylase_probability) }}
         </div>

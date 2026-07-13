@@ -4,6 +4,7 @@ import time
 import logging
 from typing import Optional
 
+
 from .db_km import KM_SELECT_SQL, KM_JOIN_SQL, normalise_sequence_km_row
 
 log = logging.getLogger(__name__)
