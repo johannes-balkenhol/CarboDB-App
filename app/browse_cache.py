@@ -9,6 +9,24 @@ from .db_km import KM_SELECT_SQL, KM_JOIN_SQL, normalise_sequence_km_row
 
 log = logging.getLogger(__name__)
 
+EC_NAMES = {
+    "4.1.1.39": "ribulose-bisphosphate carboxylase (RuBisCO)",
+    "4.2.1.1": "carbonic anhydrase",
+    "6.3.4.16": "acetyl-CoA carboxylase / biotin carboxylase",
+    "6.3.4.14": "pyruvate carboxylase",
+    "6.3.5.5": "carbamoyl-phosphate synthase",
+    "6.3.4.18": "3-methylcrotonyl-CoA carboxylase",
+    "4.1.1.49": "phosphoenolpyruvate carboxylase",
+    "6.3.3.3": "dethiobiotin synthase",
+    "4.1.1.31": "phosphoenolpyruvate carboxykinase",
+    "4.1.1.112": "2-oxoglutarate carboxylase",
+    "4.1.1.32": "phosphoenolpyruvate carboxykinase",
+    "6.4.1.1": "pyruvate carboxylase",
+    "6.4.1.2": "acetyl-CoA carboxylase",
+    "6.4.1.3": "propionyl-CoA carboxylase",
+    "6.4.1.4": "3-methylcrotonyl-CoA carboxylase",
+    "4.1.1.38": "phosphoenolpyruvate carboxykinase",
+}
 
 class BrowseCache:
     ready: bool = False
@@ -78,7 +96,12 @@ def build_browse_stats(conn: sqlite3.Connection, rows: list[dict]) -> dict:
     ec_distribution = {}
     ec_values = []
 
-    for r in rows:
+    positive_rows = [
+        r for r in rows
+        if bool(r.get("is_carboxylase")) or bool(r.get("is_carboxylase_pred"))
+    ]
+
+    for r in positive_rows:
         ec = r.get("ec_number") or r.get("ec_known") or r.get("ec_predicted")
         if not ec:
             continue
@@ -86,13 +109,18 @@ def build_browse_stats(conn: sqlite3.Connection, rows: list[dict]) -> dict:
         ec_values.append(ec)
         ec_distribution[ec] = ec_distribution.get(ec, 0) + 1
 
-    ec_distribution = dict(
-        sorted(
+    ec_distribution = [
+        {
+            "ec_number": ec,
+            "ec_name": EC_NAMES.get(ec, ""),
+            "count": count,
+        }
+        for ec, count in sorted(
             ec_distribution.items(),
             key=lambda x: x[1],
             reverse=True,
-        )[:10]
-    )
+        )
+    ]
 
     return {
         # Old compatibility fields

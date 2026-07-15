@@ -550,12 +550,21 @@ def run_batch_predict_job(
                     seq_id=seq_id,
                 )
 
-                # Add experimental-Km references for batch results too.
+                # Add BLAST nearest experimental-Km hits for batch results too.
                 if r.get("is_carboxylase") and r.get("ec_predicted"):
-                    r["top_similar"] = get_similar_from_db(
-                        r.get("ec_predicted"),
-                        r.get("km_predicted_uM"),
-                    )
+                    try:
+                        r["top_similar"] = run_blast_similar(
+                            sequence=sequence,
+                            ec_predicted=r["ec_predicted"],
+                            limit=8,
+                            manifest_path=os.environ.get(
+                                "BLAST_EXP_MANIFEST",
+                                "data/blast_ec_dbs_exp/manifest.json",
+                            ),
+                        )
+                    except Exception as exc:
+                        log.warning("Batch BLAST nearest-hit lookup failed for %s: %s", seq_id, exc)
+                        r["top_similar"] = []
                 else:
                     r["top_similar"] = []
 

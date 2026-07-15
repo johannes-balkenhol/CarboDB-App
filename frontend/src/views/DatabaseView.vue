@@ -17,9 +17,12 @@
       <div class="stat-label">With experimental Km</div>
     </div>
 
+    <!-- // now uses option linked to the dropdown menu  -->
     <div class="stat-card">
-      <div class="stat-value">{{ fmtInt(stats?.ec_classes ?? stats?.ec_classes_total) }}</div>
-      <div class="stat-label">EC classes</div>
+      <div class="stat-value">
+        {{ fmtInt(ecOptions.length) }}
+      </div>
+      <div class="stat-label">Carboxylase EC classes</div>
     </div>
 
     <div class="stat-card">
@@ -49,9 +52,12 @@
         @keyup.enter="search(0)"
       />
       <select v-model="filters.ec" class="filter-select" @change="search(0)">
-        <option value="">All EC classes</option>
+        <option value="">All carboxylase EC classes</option>
+
         <option v-for="ec in ecOptions" :key="ec.ec_number" :value="ec.ec_number">
-          {{ ec.ec_number }} — {{ ec.ec_name }} ({{ fmtInt(ec?.count) }})
+          {{ ec.ec_number }}
+          <template v-if="ec.ec_name"> — {{ ec.ec_name }}</template>
+          ({{ fmtInt(ec.count) }})
         </option>
       </select>
       <button class="search-btn" @click="search(0)">Search</button>
@@ -393,6 +399,8 @@ function sortArrow(col) {
   margin-bottom: 8px;
 }
 .search-input, .filter-select {
+  height: 38px;
+  box-sizing: border-box;
   padding: 9px 12px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -409,6 +417,7 @@ function sortArrow(col) {
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
+  height: 38px;
   cursor: pointer;
 }
 .search-btn {
