@@ -630,6 +630,7 @@ def annotate_sequence(seq_id: str,
         "warnings":               warnings,
         "runtime_seconds":        None,
         "shap":                    None,
+        "binary_explanation":      None,
     }
 
     # Load models & feature name lists
@@ -704,9 +705,62 @@ def annotate_sequence(seq_id: str,
     log.info("Predicting carboxylase activity...")
     is_carb, carb_prob, conf = predict_binary(models["binary"], binary_vec)
 
-    result["is_carboxylase"]           = bool(is_carb)
-    result["carboxylase_probability"]  = round(carb_prob, 4)
-    result["confidence"]               = conf
+    # waht contains other featurtes?
+    try:
+        raw_binary_explanation = predict_binary_contributions(
+            models["binary"],
+            binary_vec,
+            feat_names_binary,
+        )
+
+        grouped_binary_contributions = group_binary_contributions(
+            raw_binary_explanation
+        )
+
+        top_binary_features = sorted(
+            raw_binary_explanation["features"],
+            key=lambda row: row["abs_shap"],
+            reverse=True,
+        )[:10]
+
+        binary_explanation = {
+            "base_value": round(raw_binary_explanation["bias"], 6),
+            "groups": grouped_binary_contributions,
+            "top_features": [
+                {
+                    "feature": row["feature"],
+                    "group": binary_feature_group(row["feature"]),
+                    "shap_value": round(row["shap_value"], 6),
+                    "abs_shap": round(row["abs_shap"], 6),
+                    "direction": (
+                        "supports_carboxylase"
+                        if row["shap_value"] > 0
+                        else "supports_non_carboxylase"
+                        if row["shap_value"] < 0
+                        else "neutral"
+                    ),
+                }
+                for row in top_binary_features
+            ],
+        }
+
+    except Exception as e:
+        log.warning("Binary SHAP contribution calculation failed: %s", e)
+        result["warnings"].append(
+            f"Binary explanation calculation failed: {e}"
+        )
+        binary_explanation = None
+
+    if binary_explanation is not None:
+        binary_explanation["model_probability"] = round(carb_prob, 8)
+
+    result["binary_explanation"] = binary_explanation
+
+
+    result["is_carboxylase"] = bool(is_carb)
+    result["carboxylase_probability"] = round(carb_prob, 4)
+    result["confidence"] = conf
+    result["binary_explanation"] = binary_explanation
 
     log.info("  is_carboxylase=%s  prob=%.4f  confidence=%s",
                 is_carb, carb_prob, conf)
@@ -753,6 +807,137 @@ def annotate_sequence(seq_id: str,
     result["runtime_seconds"] = round(time.time() - t0, 2)
     return result
 
+
+def predict_binary_contributions(
+    booster,
+    vec: np.ndarray,
+    feature_names: list[str],
+) -> dict:
+    import xgboost as xgb
+
+    dmat = xgb.DMatrix(
+        vec.reshape(1, -1),
+        feature_names=feature_names,
+    )
+
+    contributions = booster.predict(
+        dmat,
+        pred_contribs=True,
+    )[0]
+
+    feature_values = contributions[:-1]
+    bias = float(contributions[-1])
+
+    rows = []
+
+    for name, value in zip(feature_names, feature_values):
+        rows.append({
+            "feature": name,
+            "shap_value": float(value),
+            "abs_shap": abs(float(value)),
+        })
+
+    return {
+        "bias": bias,
+        "features": rows,
+    }
+
+def binary_feature_group(feature_name: str) -> str:
+    if feature_name.startswith("pfam_"):
+        return "Pfam domains"
+
+    if feature_name.startswith("esm2_"):
+        return "ESM-2 embedding"
+
+    if feature_name.startswith("dp_"):
+        return "Dipeptide composition"
+
+    if feature_name.startswith("aac_") or feature_name.startswith("pse_"):
+        return "Amino acid composition"
+
+    if feature_name.startswith("phys_"):
+        return "Physicochemical properties"
+
+    if feature_name.startswith("motif_"):
+        return "Sequence motifs"
+
+    if feature_name.startswith("inv_"):
+        return "Catalytic core motifs"
+
+    if feature_name in {
+        "n_pfam_hits",
+        "n_panther_hits",
+        "n_tigrfam_hits",
+        "n_cath_hits",
+        "n_superfamily_hits",
+    }:
+        return "InterPro/domain evidence"
+
+    return "Other"
+
+def group_binary_contributions(explanation: dict) -> list[dict]:
+    if not explanation or not explanation.get("features"):
+        return []
+
+    grouped = {}
+
+    for row in explanation["features"]:
+        group_name = binary_feature_group(row["feature"])
+
+        if group_name not in grouped:
+            grouped[group_name] = {
+                "group": group_name,
+                "signed_shap": 0.0,
+                "abs_shap": 0.0,
+                "positive_shap": 0.0,
+                "negative_shap": 0.0,
+                "feature_count": 0,
+            }
+
+        shap_value = float(row["shap_value"])
+
+        grouped[group_name]["signed_shap"] += shap_value
+        grouped[group_name]["abs_shap"] += abs(shap_value)
+        grouped[group_name]["feature_count"] += 1
+
+        if shap_value > 0:
+            grouped[group_name]["positive_shap"] += shap_value
+        elif shap_value < 0:
+            grouped[group_name]["negative_shap"] += abs(shap_value)
+
+    total_abs = sum(group["abs_shap"] for group in grouped.values())
+
+    output = []
+
+    for group in grouped.values():
+        signed = group["signed_shap"]
+
+        group["importance_pct"] = (
+            group["abs_shap"] / total_abs * 100.0
+            if total_abs > 0
+            else 0.0
+        )
+
+        if signed > 0:
+            group["direction"] = "supports_carboxylase"
+        elif signed < 0:
+            group["direction"] = "supports_non_carboxylase"
+        else:
+            group["direction"] = "neutral"
+
+        group["signed_shap"] = round(group["signed_shap"], 6)
+        group["abs_shap"] = round(group["abs_shap"], 6)
+        group["positive_shap"] = round(group["positive_shap"], 6)
+        group["negative_shap"] = round(group["negative_shap"], 6)
+        group["importance_pct"] = round(group["importance_pct"], 2)
+
+        output.append(group)
+
+    return sorted(
+        output,
+        key=lambda group: group["abs_shap"],
+        reverse=True,
+    )
 
 # ══════════════════════════════════════════════════════════════════════════════
 # CLI

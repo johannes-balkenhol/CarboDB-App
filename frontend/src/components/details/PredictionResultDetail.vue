@@ -38,20 +38,83 @@
         <div class="rd-metric-value" :class="probClass(result.carboxylase_probability)">
           {{ formatPct(result.carboxylase_probability) }}
         </div>
-        <div class="rd-metric-bar">
-          <div class="rd-metric-bar-fill" :class="probClass(result.carboxylase_probability)"
-               :style="{ width: (result.carboxylase_probability * 100) + '%' }"></div>
+        <div
+          v-if="binaryGroups.length"
+          class="rd-metric-bar rd-binary-inline-stack"
+          aria-label="Relative local SHAP feature-group importance"
+        >
+          <div
+            v-for="group in binaryGroups"
+            :key="group.group"
+            class="rd-binary-stack-segment"
+            :style="{
+              width: `${group.importance_pct}%`,
+              backgroundColor: groupColor(group.group),
+            }"
+            :title="`${shortBinaryGroupName(group.group)}: ${group.importance_pct.toFixed(1)}%`"
+          ></div>
+        </div>
+
+        <div v-else class="rd-metric-bar">
+          <div
+            class="rd-metric-bar-fill"
+            :class="probClass(result.carboxylase_probability)"
+            :style="{ width: (result.carboxylase_probability * 100) + '%' }"
+          ></div>
+        </div>
+        <div
+          v-if="binaryGroups.length"
+          class="rd-binary-inline-legend"
+        >
+          <span
+            v-for="group in binaryGroups.slice(0, 4)"
+            :key="group.group"
+            class="rd-binary-inline-legend-item"
+          >
+            <span
+              class="rd-binary-legend-dot"
+              :style="{ backgroundColor: groupColor(group.group) }"
+            ></span>
+
+            {{ shortBinaryGroupName(group.group) }}
+
+            <strong>
+              {{ group.importance_pct.toFixed(0) }}%
+            </strong>
+          </span>
         </div>
       </div>
 
+
       <div class="rd-metric">
         <div class="rd-metric-label">EC confidence</div>
-        <div class="rd-metric-value" :class="probClass(result.ec_confidence)">
+
+        <div
+          class="rd-metric-value"
+          :class="probClass(result.ec_confidence)"
+        >
           {{ formatPct(result.ec_confidence) }}
         </div>
+
         <div class="rd-metric-bar">
-          <div class="rd-metric-bar-fill" :class="probClass(result.ec_confidence)"
-               :style="{ width: ((result.ec_confidence || 0) * 100) + '%' }"></div>
+          <div
+            class="rd-metric-bar-fill"
+            :class="probClass(result.ec_confidence)"
+            :style="{ width: ((result.ec_confidence || 0) * 100) + '%' }"
+          ></div>
+        </div>
+
+        <div
+          v-if="topEcCandidate"
+          class="rd-ec-inline-detail"
+        >
+          <span class="rd-ec-inline-badge">
+            EC {{ topEcCandidate.ec }}
+          </span>
+
+          <span class="rd-ec-inline-name">
+            {{ topEcCandidate.name }}
+          </span>
         </div>
       </div>
 
@@ -67,91 +130,8 @@
       </div>
     </section>
 
-    <!-- ═══ HEADLINE Km COMPARISON ═══════════════════════════════════════ -->
-    <!-- Surfaces predicted Km vs the BLAST top-hit's experimental Km right at the top -->
-     <!-- why? why experimental Km is for the top hit and not the entry itself? -->
-    <!-- <section v-if="topKmHit" class="rd-section rd-km-headline">
-      <h3 class="rd-section-title">Predicted vs experimental Km</h3>
-      <div class="rd-km-compare rd-km-compare-headline">
-        <div class="rd-km-box rd-km-experimental">
-          <div class="rd-km-label">Predicted K<sub>m</sub></div>
-          <div class="rd-km-value">
-            {{ result.km_predicted_uM?.toFixed(1) ?? '—' }}
-            <span class="rd-km-unit">µM</span>
-          </div>
-          <div class="rd-km-sub">your sequence</div>
-        </div>
-        <div class="rd-km-arrow">↔</div>
-        <div class="rd-km-box rd-km-predicted">
-          <div class="rd-km-label">Experimental K<sub>m</sub><span v-if="topKmHit.km_exp_substrate">
-            ({{ topKmHit.km_exp_substrate }})</span></div>
-          <div class="rd-km-value">
-            {{ topKmHit.km_experimental_uM?.toFixed(1) ?? '—' }}
-            <span class="rd-km-unit">µM</span>
-          </div>
-          <div class="rd-km-sub">
-            {{ topKmHit.uniprot_id }} ·
-            {{ topKmHit.identity_pct?.toFixed(1) }}% identity ·
-            BRENDA
-          </div>
-        </div>
-        <div v-if="foldChange(topKmHit) !== null"
-             class="rd-km-delta"
-             :class="deltaClass(foldChange(topKmHit))">
-          {{ foldChangeLabel(topKmHit) }}
-        </div>
-      </div>
-    </section> -->
-
-    <!-- ═══ HEADLINE Km COMPARISON ═══════════════════════════════════════ -->
-    <!-- For DB lookup, compare the selected sequence's predicted Km against its own experimental Km. -->
-    <section v-if="ownExperimentalKm != null || topKmHit" class="rd-section rd-km-headline">
-      <h3 class="rd-section-title">Predicted vs experimental Km</h3>
-
-      <div class="rd-km-compare rd-km-compare-headline">
-        <div class="rd-km-box rd-km-experimental">
-          <div class="rd-km-label">Predicted K<sub>m</sub></div>
-          <div class="rd-km-value">
-            {{ result.km_predicted_uM?.toFixed(1) ?? '—' }}
-            <span class="rd-km-unit">µM</span>
-          </div>
-          <div class="rd-km-sub">selected sequence</div>
-        </div>
-
-        <div class="rd-km-arrow">↔</div>
-
-        <div class="rd-km-box rd-km-predicted">
-          <div class="rd-km-label">
-            Experimental K<sub>m</sub>
-            <span v-if="ownExperimentalSubstrate">({{ ownExperimentalSubstrate }})</span>
-          </div>
-          <div class="rd-km-value">
-            {{ ownExperimentalKm?.toFixed(1) ?? '—' }}
-            <span class="rd-km-unit">µM</span>
-          </div>
-          <div class="rd-km-sub">
-            <template v-if="ownExperimentalKm != null">
-              selected DB sequence · {{ ownExperimentalSource || 'BRENDA' }}
-            </template>
-            <template v-else-if="topKmHit">
-              no own experimental Km; nearest reference shown below
-            </template>
-          </div>
-        </div>
-
-        <div
-          v-if="ownFoldChange !== null"
-          class="rd-km-delta"
-          :class="deltaClass(ownFoldChange)"
-        >
-          {{ ownFoldChangeLabel }}
-        </div>
-      </div>
-    </section>
-
-
     <!-- ═══ EC PROBABILITY DISTRIBUTION ══════════════════════════════════ -->
-    <section v-if="sortedEcProbs.length > 0" class="rd-section">
+    <!-- <section v-if="sortedEcProbs.length > 0" class="rd-section">
       <h3 class="rd-section-title">EC classification — top candidates</h3>
       <div class="rd-ec-bars">
         <div v-for="(item, i) in sortedEcProbs" :key="item.ec"
@@ -164,7 +144,7 @@
           <span class="rd-ec-bar-value">{{ formatPct(item.prob) }}</span>
         </div>
       </div>
-    </section>
+    </section> -->
 
     <!-- ═══ PFAM DOMAINS ═════════════════════════════════════════════════ -->
     <!-- <section v-if="pfamNormalized.length > 0" class="rd-section">
@@ -651,6 +631,10 @@ const sortedEcProbs = computed(() => {
     .filter(x => x.prob > 0.0001) // hide near-zero probabilities
 })
 
+// ─── Top EC candidate for inline display ───────────────────────────────
+const topEcCandidate = computed(() => {
+  return sortedEcProbs.value[0] || null
+})
 // ─── Pfam normalization (handles both old list[str] and new list[dict]) ──
 // const pfamNormalized = computed(() => {
 //   const hits = props.result.pfam_hits || []
@@ -894,6 +878,49 @@ const ownFoldChangeLabel = computed(() => {
 
   return `Δ = ${ownFoldChange.value.toFixed(1)}× ${dir}`
 })
+
+// binary classifcation helpers
+const binaryGroups = computed(() => {
+  return props.result?.binary_explanation?.groups || []
+})
+
+const binaryTopFeatures = computed(() => {
+  return props.result?.binary_explanation?.top_features || []
+})
+
+// const binaryExplanationText = computed(() => {
+//   const groups = binaryGroups.value
+
+//   if (!groups.length) return ''
+
+//   const strongestNetPositive = [...groups]
+//     .filter(group => group.signed_shap > 0)
+//     .sort((a, b) => b.signed_shap - a.signed_shap)
+
+//   const strongestMagnitude = [...groups]
+//     .sort((a, b) => b.importance_pct - a.importance_pct)
+
+//   const positive = strongestNetPositive[0]
+//   const magnitude = strongestMagnitude[0]
+
+//   return 'The classifier found limited positive evidence for carboxylase activity.'
+// })
+
+function shortBinaryGroupName(name) {
+  const labels = {
+    'ESM-2 embedding': 'ESM-2',
+    'Pfam domains': 'Pfam',
+    'Dipeptide composition': 'Dipeptides',
+    'Amino acid composition': 'Amino acids',
+    'Catalytic core motifs': 'Catalytic motifs',
+    'Physicochemical properties': 'Physicochemical',
+    'Sequence motifs': 'Sequence motifs',
+    'InterPro/domain evidence': 'InterPro',
+    'Other': 'Other',
+  }
+
+  return labels[name] || name
+}
 
 // ─── Feature interpretation tooltips ─────────────────────────────────────
 // Builds a human-readable explanation for each SHAP feature shown in the
@@ -1175,7 +1202,7 @@ const matchSummary = computed(() => {
 .rd-metric-km   { color: #2d3748; font-family: 'Monaco', monospace; font-size: 24px; }
 .rd-unit { font-size: 14px; color: #718096; font-weight: 500; margin-left: 2px; }
 .rd-metric-sub { font-size: 11px; color: #a0aec0; font-family: 'Monaco', monospace; }
-.rd-metric-bar { height: 4px; background: #edf2f7; border-radius: 2px; overflow: hidden; }
+.rd-metric-bar { height: 6px; background: #edf2f7; border-radius: 2px; overflow: hidden; }
 .rd-metric-bar-fill { height: 100%; transition: width 0.4s ease; }
 .rd-metric-bar-fill.rd-prob-high { background: #48bb78; }
 .rd-metric-bar-fill.rd-prob-mid  { background: #ed8936; }
@@ -1682,4 +1709,74 @@ const matchSummary = computed(() => {
   padding: 8px 10px;
 }
 
+/* binary calssifcation  */
+.rd-binary-inline-stack {
+  display: flex;
+  height: 7px;
+  border-radius: 999px;
+  background: #edf2f7;
+}
+
+.rd-binary-inline-stack .rd-binary-stack-segment {
+  height: 100%;
+  min-width: 1px;
+}
+
+.rd-binary-inline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.7rem;
+  margin-top: 0.45rem;
+}
+
+.rd-binary-inline-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #64748b;
+  font-size: 0.66rem;
+  white-space: nowrap;
+}
+
+.rd-binary-inline-legend-item strong {
+  color: #334155;
+  font-weight: 700;
+}
+
+.rd-binary-legend-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+}
+
+
+/* new ec line */
+
+.rd-ec-inline-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+  min-width: 0;
+  font-size: 0.8rem;
+}
+
+.rd-ec-inline-badge {
+  padding: 0.12rem 0.35rem;
+  border-radius: 5px;
+  background: #edf2f7;
+  color: #334155;
+  font-family: 'Monaco', 'SF Mono', monospace;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rd-ec-inline-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #64748b;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 </style>

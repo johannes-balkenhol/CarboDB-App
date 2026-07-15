@@ -165,7 +165,7 @@
         </button>
 
         <div v-if="detailLoading" class="detail-loading">
-          Loading full sequence details…
+          Loading Entry Details ...
         </div>
 
         <ResultDetail

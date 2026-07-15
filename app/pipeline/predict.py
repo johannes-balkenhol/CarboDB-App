@@ -335,6 +335,7 @@ def predict_sequence(sequence, mode="fast", kingdom="plant", seq_id="query"):
             "features_computed": d.get("features_computed", {}),
             "shap": d.get("shap"),
             "warnings": d.get("warnings", []),
+            "binary_explanation": d.get("binary_explanation"),
 
             # Webapp-level metadata
             "novelty_flag": (
