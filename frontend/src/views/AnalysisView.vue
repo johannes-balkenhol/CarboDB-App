@@ -137,11 +137,15 @@ MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
               <td>{{ (result.ec_confidence * 100).toFixed(0) }}%</td>
               <td class="km-pred">{{ result.km_predicted_uM?.toFixed(1) || '-' }}</td>
               <td class="neighbor">
-                <a v-if="result.nearest_neighbor" 
-                   :href="'https://www.uniprot.org/uniprotkb/' + result.nearest_neighbor.uniprot_id" 
-                   target="_blank">
+                <button
+                  v-if="result.nearest_neighbor?.uniprot_id"
+                  type="button"
+                  class="neighbor-db-link"
+                  @click="openCarboDbModal(result.nearest_neighbor.uniprot_id)"
+                >
                   {{ result.nearest_neighbor.uniprot_id }}
-                </a>
+                </button>
+
                 <span v-else>-</span>
               </td>
               <td class="km-exp">
@@ -184,12 +188,52 @@ MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
     <div v-if="error" class="error-message">
       {{ error }}
     </div>
+    <!-- teleport for database view for top blast hit -->
+    <Teleport to="body">
+      <div
+        v-if="databaseModalOpen"
+        class="analysis-db-overlay"
+        @click.self="closeCarboDbModal"
+      >
+        <div class="analysis-db-dialog">
+          <button
+            type="button"
+            class="analysis-db-close"
+            aria-label="Close database entry"
+            @click="closeCarboDbModal"
+          >
+            ×
+          </button>
+
+          <div
+            v-if="databaseModalLoading"
+            class="analysis-db-state"
+          >
+            Loading CarboDB entry…
+          </div>
+
+          <div
+            v-else-if="databaseModalError"
+            class="analysis-db-state analysis-db-error"
+          >
+            {{ databaseModalError }}
+          </div>
+
+          <DatabaseResultDetail
+            v-else-if="databaseModalResult"
+            :result="databaseModalResult"
+            :closable="false"
+          />
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
 import ResultDetail from '@/components/ResultDetail.vue'
+import DatabaseResultDetail from '../components/details/DatabaseResultDetail.vue'
 
 const API_URL = ''
 
@@ -210,6 +254,11 @@ const selectedKingdom = ref('plant')
 const batchResults = ref([])
 const summary = ref({ total: 0, consensus_positive: 0, with_neighbor: 0 })
 const selectedResult = ref(null)
+const databaseModalOpen = ref(false)
+const databaseModalLoading = ref(false)
+const databaseModalResult = ref(null)
+const databaseModalError = ref('')
+
 
 const exampleSequences = {
   rubisco: `>RuBisCO_spinach_P00875_EC4.1.1.39_BRENDA_10uM
@@ -833,6 +882,40 @@ onUnmounted(() => {
     batchAbortController.value.abort()
   }
 })
+
+// loader for database view for top blast hit
+async function openCarboDbModal(uniprotId) {
+  if (!uniprotId) return
+
+  databaseModalOpen.value = true
+  databaseModalLoading.value = true
+  databaseModalResult.value = null
+  databaseModalError.value = ''
+
+  try {
+    const res = await fetch(
+      `${API_URL}/api/v1/db/seq/${encodeURIComponent(uniprotId)}`
+    )
+
+    if (!res.ok) {
+      throw new Error(`Database entry request failed: ${res.status}`)
+    }
+
+    databaseModalResult.value = await res.json()
+  } catch (error) {
+    console.error('Could not load CarboDB entry:', error)
+    databaseModalError.value = `Could not load CarboDB entry ${uniprotId}.`
+  } finally {
+    databaseModalLoading.value = false
+  }
+}
+
+function closeCarboDbModal() {
+  databaseModalOpen.value = false
+  databaseModalLoading.value = false
+  databaseModalResult.value = null
+  databaseModalError.value = ''
+}
 </script>
 
 <style scoped>
@@ -925,7 +1008,7 @@ textarea:focus {
 .predict-btn {
   margin-top: 15px;
   padding: 12px 30px;
-  background: #234d81;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
   color: white;
   border: none;
   border-radius: 8px;
@@ -1177,5 +1260,106 @@ textarea:focus {
 .seq-count-notice { margin: 10px 0; padding: 8px 12px; border-radius: 6px; font-size: 13px; line-height: 1.5; }
 .seq-count-info { background: #ebf8ff; color: #2c5282; border-left: 3px solid #4299e1; }
 .seq-count-warn { background: #fffaf0; color: #744210; border-left: 3px solid #ecc94b; }
+
+.neighbor-db-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #667eea;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.neighbor-db-link:hover {
+  text-decoration: underline;
+}
+
+.neighbor-db-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #667eea;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.neighbor-db-link:hover {
+  text-decoration: underline;
+}
+
+.analysis-db-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+
+  width: 100vw !important;
+  height: 100vh !important;
+  padding: 3rem 1.5rem;
+  box-sizing: border-box;
+
+  overflow: auto;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.analysis-db-dialog {
+  position: relative !important;
+  display: block !important;
+  flex: none !important;
+
+  width: min(1100px, calc(100vw - 3rem)) !important;
+  max-width: 1100px !important;
+  min-width: 0;
+  max-height: calc(100vh - 6rem);
+
+  margin: 0 auto !important;
+  overflow-y: auto;
+
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.3);
+}
+
+.analysis-db-close {
+  position: sticky;
+  top: 12px;
+  z-index: 20;
+
+  display: block;
+  width: 32px;
+  height: 32px;
+  margin: 12px 14px -40px auto;
+  padding: 0;
+
+  border: 0;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #475569;
+
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.analysis-db-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.analysis-db-state {
+  padding: 3rem;
+  text-align: center;
+  color: #64748b;
+}
+
+.analysis-db-error {
+  color: #b91c1c;
+}
 
 </style>

@@ -1,3 +1,8 @@
+import { onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
 <template>
   <div class="database-view">
   <!-- ═══ Stats banner ═══════════════════════════════════════════════════ -->
@@ -178,8 +183,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, watch, computed, onMounted } from 'vue'
 import ResultDetail from '../components/ResultDetail.vue'
+import { useRoute } from 'vue-router'
+
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 

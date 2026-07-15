@@ -319,15 +319,13 @@
             <div class="rd-neighbor-head">
               <span class="rd-neighbor-rank">#{{ sim.rank }}</span>
 
-              <a
-                :href="'https://www.uniprot.org/uniprotkb/' + sim.uniprot_id"
-                target="_blank"
-                rel="noopener"
-                class="rd-link rd-neighbor-uid"
+              <button
+                type="button"
+                class="rd-link rd-neighbor-uid rd-neighbor-db-link"
+                @click="openCarboDbModal(sim.uniprot_id)"
               >
                 {{ sim.uniprot_id }}
-                <span class="rd-external">↗</span>
-              </a>
+              </button>
 
               <span class="rd-neighbor-org">{{ sim.organism || 'unknown organism' }}</span>
 
@@ -550,12 +548,58 @@
       :api-base="'/api/v1'"
       :pfam-hits="result.pfam_hits || []"
     />
+    <Teleport to="body">
+      <div
+        v-if="databaseModalOpen"
+        class="rd-db-modal-backdrop"
+        @click.self="closeCarboDbModal"
+      >
+        <div class="rd-db-modal">
+          <button
+            type="button"
+            class="rd-db-modal-close"
+            aria-label="Close database entry"
+            @click="closeCarboDbModal"
+          >
+            ×
+          </button>
+
+          <div v-if="databaseModalLoading" class="rd-db-modal-state">
+            Loading CarboDB entry…
+          </div>
+
+          <div
+            v-else-if="databaseModalError"
+            class="rd-db-modal-state rd-db-modal-error"
+          >
+            {{ databaseModalError }}
+          </div>
+
+          <DatabaseResultDetail
+            v-else-if="databaseModalResult"
+            :result="databaseModalResult"
+            :closable="false"
+          />
+        </div>
+      </div>
+    </Teleport>
+
   </div>
 </template>
 
 <script setup>
 import { computed, ref, watchEffect } from 'vue'
-// import ExtendedDetails from './ExtendedDetails.vue'
+import { useRouter } from 'vue-router'
+import DatabaseResultDetail from './DatabaseResultDetail.vue'
+
+const router = useRouter()
+
+function openCarboDbEntry(uniprotId) {
+  if (!uniprotId) return
+
+  sessionStorage.setItem('carbodb_open_entry', uniprotId)
+  router.push('/database')
+}
 
 const props = defineProps({
   result:   { type: Object, required: true },
@@ -1071,6 +1115,48 @@ const matchSummary = computed(() => {
   else if (ratio >= 0.3) verdict = 'moderate'
   return { hits, absent, unknown, total: feats.length, interpretable, verdict }
 })
+
+// database view for blast hits
+
+const databaseModalOpen = ref(false)
+const databaseModalLoading = ref(false)
+const databaseModalResult = ref(null)
+const databaseModalError = ref('')
+
+async function openCarboDbModal(uniprotId) {
+  if (!uniprotId) return
+
+  databaseModalOpen.value = true
+  databaseModalLoading.value = true
+  databaseModalResult.value = null
+  databaseModalError.value = ''
+
+  try {
+    const res = await fetch(
+      `${API_URL}/api/v1/db/seq/${encodeURIComponent(uniprotId)}`
+    )
+
+    if (!res.ok) {
+      throw new Error(`Database entry request failed: ${res.status}`)
+    }
+
+    databaseModalResult.value = await res.json()
+  } catch (error) {
+    console.error('Could not load CarboDB entry:', error)
+    databaseModalError.value = `Could not load CarboDB entry ${uniprotId}.`
+  } finally {
+    databaseModalLoading.value = false
+  }
+}
+
+function closeCarboDbModal() {
+  databaseModalOpen.value = false
+  databaseModalLoading.value = false
+  databaseModalResult.value = null
+  databaseModalError.value = ''
+}
+
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 </script>
 
@@ -1740,5 +1826,95 @@ const matchSummary = computed(() => {
   color: #64748b;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+
+.rd-neighbor-db-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.rd-neighbor-db-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.rd-db-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+
+  padding: 3rem 1.5rem;
+  overflow-y: auto;
+
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.rd-db-modal {
+  width: min(1100px, 100%);
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
+
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.25);
+}
+
+.rd-db-modal-state {
+  padding: 3rem;
+  text-align: center;
+  color: #64748b;
+}
+
+.rd-db-modal-error {
+  color: #b91c1c;
+}
+
+.rd-db-modal {
+  position: relative;
+  width: min(1100px, 100%);
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
+
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.25);
+}
+
+.rd-db-modal-close {
+  position: sticky;
+  top: 12px;
+  z-index: 10;
+
+  display: block;
+  margin: 12px 14px -40px auto;
+  padding: 0;
+
+  width: 32px;
+  height: 32px;
+
+  border: 0;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #475569;
+
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.rd-db-modal-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 </style>
