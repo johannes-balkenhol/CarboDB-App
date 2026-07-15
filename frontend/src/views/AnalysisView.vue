@@ -26,7 +26,7 @@
           <button type="button" class="example-btn" @click="loadExample('pepc_maize')" title="P04711 maize PEPC, 970 aa, EC 4.1.1.31">Maize PEPC</button>
           <button type="button" class="example-btn" @click="loadExample('batch_demo')" title="RuBisCO + CA2 (2-sequence FASTA, runs as batch)">Batch demo</button>
         </div>
-
+        <br>
         <textarea
           v-model="fastaInput"
           placeholder=">RuBisCO_spinach
@@ -94,7 +94,7 @@ MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
     <!-- Batch Results Summary -->
     <div v-if="batchResults && batchResults.length > 0" class="batch-results">
       <div class="results-header">
-        <h2>📊 Batch Results ({{ batchResults.length }} sequences)</h2>
+        <h2>Results ({{ batchResults.length }} sequences)</h2>
         <div class="summary-stats">
           <span class="stat">
             <strong>{{ summary.consensus_positive }}</strong> CO₂ positive
@@ -116,9 +116,9 @@ MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
               <th>Consensus</th>
               <th>EC Predicted</th>
               <th>EC Conf</th>
-              <th>Predicted Km (µM)</th>
-              <th>Nearest BLAST hit</th>
-              <th>Experimental Km (closest hit)</th>
+              <th>Predicted Km <span style="font-size: 0.8em;">(µM)</span></th>
+              <th>Closest BLAST hit</th>
+              <th>Experimental Km <span style="font-size: 0.8em;">(closest hit)</span></th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -155,7 +155,16 @@ MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
                 <span v-else>—</span>
               </td>
               <td>
-                <button @click="viewDetail(result)" class="view-btn">Details</button>
+                <button
+                  type="button"
+                  class="view-btn"
+                  :class="{ active: resultKey(selectedResult) === resultKey(result) }"
+                  @click="viewDetail(result)"
+                >
+                  {{ resultKey(selectedResult) === resultKey(result)
+                    ? 'Collapse'
+                    : 'Details' }}
+                </button>
               </td>
             </tr>
           </tbody>
@@ -668,52 +677,73 @@ function parseFastaMap(fasta) {
   }
   return map
 }
+function resultKey(result) {
+  return (
+    result?.id ||
+    result?.cdb_query_id ||
+    result?.sequence_id ||
+    result?.uniprot_id
+  )
+}
 
 async function viewDetail(result) {
-  // If the row has full per-sequence data already (single predict, or already re-fetched),
-  // just show it. Batch rows lack features_computed/shap/top_similar, so re-fetch those.
+  const clickedKey = resultKey(result)
+  const selectedKey = resultKey(selectedResult.value)
+
+  // Clicking the currently open sequence closes its detail panel
+  if (clickedKey && clickedKey === selectedKey) {
+    selectedResult.value = null
+    return
+  }
+
+  // Full per-sequence data already available
   if (result.features_computed || result.shap) {
     selectedResult.value = result
     return
   }
 
-  // Batch row: find raw sequence by id, re-call /predict for full data
+  // Batch row: find the submitted raw sequence
   const seqMap = parseFastaMap(fastaInput.value)
   const rawSeq = seqMap[result.id]
+
   if (!rawSeq) {
-    // Fall back to the shallow row — at least show what we have
     selectedResult.value = result
     return
   }
 
-  // Show shallow row immediately so the panel opens without a blank wait
-  selectedResult.value = { ...result, _loadingDetails: true }
+  // Immediately switch the panel to the newly selected sequence
+  selectedResult.value = {
+    ...result,
+    _loadingDetails: true,
+  }
 
   try {
-    // Prefer the cached per-seq JSON the batch worker saved (instant — no re-predict)
     let data = null
-    // if (result._jobId && (result.features_used || result.pfam_hits || result.ec_probabilities)) {
-    //   selectedResult.value = result
-    //   return
-    // }
-    if (result.features_computed || result.shap) {
-      selectedResult.value = result
-      return
+
+    const res = await fetch(`${API_URL}/api/v1/predict`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sequence: rawSeq,
+        mode: selectedMode.value || 'standard',
+        kingdom: selectedKingdom.value || 'plant',
+      }),
+    })
+
+    if (!res.ok) {
+      throw new Error(`Detail request failed: ${res.status}`)
     }
-    // Fall back to a fresh /predict call only if the cache lookup failed
-    if (!data || !data.ec_predicted) {
-      const res = await fetch(`${API_URL}/api/v1/predict`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sequence: rawSeq,
-          mode: selectedMode.value || 'standard',
-          kingdom: selectedKingdom.value || 'plant'
-        })
-      })
-      data = await res.json()
-    }
-    if (data && data.ec_predicted) {
+
+    data = await res.json()
+
+    if (data?.ec_predicted) {
+      // Make sure the user has not selected a different row while waiting
+      if (resultKey(selectedResult.value) !== clickedKey) {
+        return
+      }
+
       selectedResult.value = {
         ...data,
         id: result.id,
@@ -721,14 +751,20 @@ async function viewDetail(result) {
         co2_prob_v3: data.carboxylase_probability,
         co2_prob_v5: data.carboxylase_probability,
         consensus: data.is_carboxylase,
-        nearest_neighbor: data.top_similar?.[0] ? {
-          ...data.top_similar[0],
-          km_experimental: data.top_similar[0].km_experimental_uM,
-        } : null,
+        nearest_neighbor: data.top_similar?.[0]
+          ? {
+              ...data.top_similar[0],
+              km_experimental:
+                data.top_similar[0].km_experimental_uM,
+            }
+          : null,
       }
     }
   } catch (e) {
-    selectedResult.value = result
+    // Only restore this row if the user has not selected another one
+    if (resultKey(selectedResult.value) === clickedKey) {
+      selectedResult.value = result
+    }
   }
 }
 

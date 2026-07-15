@@ -62,18 +62,26 @@ Removed the misleading BLAST/same-EC section.S
 
 Added database entry metadata such as UniProt ID, CarboDB ID, organism, known/predicted EC, source, reviewed status, length, and amino-acid sequence with copy/link support.
 
+Fixed the database EC dropdown
+
+### Local binary SHAP explanation
+
+Added per-sequence local SHAP values for the binary carboxylase classifier using XGBoost `pred_contribs=True`.
+Grouped feature contributions into ESM-2, Pfam, dipeptide, amino-acid, motif, physicochemical, InterPro, and other categories.
+Exposed the grouped explanation through the prediction API as `binary_explanation`.
+Replaced the standard probability progress bar with a stacked SHAP contribution bar and compact legend in the prediction detail view.
+Database-side local SHAP reconstruction is feasible but was left for later implementation.
+
+
 
 
 ## To DO:
-Blast info for browser detials is still missing.
 
 Workspace: /storage/users/job37yv/Projects/CarboDB-App-v2/ (you're in carbodb group — log out + back in if groups doesn't show it). Pull main, read docs/2026-06-24_AMAN_REPORT.md for start/stop/logs. Test the running app in browser (VPN on): http://132.187.22.206:5173/ → Analysis → click RuBisCO example → Analyze. Should return EC 4.1.1.39 after ~30-90s.
 
 
 Use ec_known/ec_number before ec_predicted in browse.py, so database entries are explained using their curated EC annotation.
-Also filter out pfam_n_hits from shap_summary.py, because it is too generic and makes weak support look misleadingly moderate.
 
 change front end how details are shown very non user friendly
 
-
-fixing the database EC dropdown
+Database-side local SHAP reconstruction is feasible but was left for later implementation.

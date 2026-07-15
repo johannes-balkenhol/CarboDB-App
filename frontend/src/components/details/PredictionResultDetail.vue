@@ -7,13 +7,6 @@
           <span class="rd-id-label">Query</span>
           <h2 class="rd-id-value">{{ result.id || result.cdb_query_id || 'sequence' }}</h2>
         </div>
-        <div class="rd-verdict" :class="verdictClass">
-          <span class="rd-verdict-icon">{{ result.is_carboxylase ? '✓' : '✗' }}</span>
-          <div class="rd-verdict-text">
-            <strong>{{ result.is_carboxylase ? 'Carboxylase' : 'Not carboxylase' }}</strong>
-            <span class="rd-verdict-sub">{{ formatConfidence }}</span>
-          </div>
-        </div>
       </div>
 
       <div class="rd-subtitle" v-if="result.ec_name">
@@ -588,20 +581,6 @@ function probClass(p) {
   return 'rd-prob-low'
 }
 
-const verdictClass = computed(() => {
-  if (!props.result.is_carboxylase) return 'rd-verdict-neg'
-  const p = props.result.carboxylase_probability || 0
-  return p >= 0.9 ? 'rd-verdict-strong' : 'rd-verdict-weak'
-})
-
-const formatConfidence = computed(() => {
-  const c = props.result.confidence
-  const p = props.result.carboxylase_probability
-  if (!c && p == null) return ''
-  if (c) return `${c} confidence · ${formatPct(p)}`
-  return formatPct(p)
-})
-
 // ─── EC probability distribution ─────────────────────────────────────────
 // Backend returns ec_probabilities as { "4.1.1.39": 0.9998, ... }.
 // Sort descending, keep top 5, look up names from EC_NAMES if available.
@@ -1134,24 +1113,6 @@ const matchSummary = computed(() => {
   font-family: 'Monaco', monospace;
 }
 .rd-ec-name { color: #4a5568; font-size: 15px; font-style: italic; }
-
-.rd-verdict {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 16px; border-radius: 10px; background: #f7fafc;
-  border: 1px solid #e2e8f0;
-}
-.rd-verdict-strong { background: #f0fff4; border-color: #9ae6b4; }
-.rd-verdict-weak   { background: #fffaf0; border-color: #fbd38d; }
-.rd-verdict-neg    { background: #fff5f5; border-color: #feb2b2; }
-.rd-verdict-icon {
-  font-size: 20px; width: 32px; height: 32px; display: flex;
-  align-items: center; justify-content: center; border-radius: 50%;
-}
-.rd-verdict-strong .rd-verdict-icon { background: #48bb78; color: white; }
-.rd-verdict-weak   .rd-verdict-icon { background: #ed8936; color: white; }
-.rd-verdict-neg    .rd-verdict-icon { background: #e53e3e; color: white; }
-.rd-verdict-text strong { display: block; font-size: 14px; color: #2d3748; }
-.rd-verdict-sub { font-size: 12px; color: #718096; text-transform: capitalize; }
 
 .rd-close {
   position: absolute; top: 16px; right: 16px;
@@ -1710,6 +1671,7 @@ const matchSummary = computed(() => {
 }
 
 /* binary calssifcation  */
+
 .rd-binary-inline-stack {
   display: flex;
   height: 7px;
@@ -1734,7 +1696,7 @@ const matchSummary = computed(() => {
   align-items: center;
   gap: 0.25rem;
   color: #64748b;
-  font-size: 0.66rem;
+  font-size: 0.875rem;
   white-space: nowrap;
 }
 
@@ -1744,9 +1706,9 @@ const matchSummary = computed(() => {
 }
 
 .rd-binary-legend-dot {
-  width: 6px;
-  height: 6px;
-  flex: 0 0 6px;
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
   border-radius: 50%;
 }
 
@@ -1759,7 +1721,7 @@ const matchSummary = computed(() => {
   gap: 0.4rem;
   margin-top: 0.45rem;
   min-width: 0;
-  font-size: 0.8rem;
+  font-size: 0.875rem;
 }
 
 .rd-ec-inline-badge {

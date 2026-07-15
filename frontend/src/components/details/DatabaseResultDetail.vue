@@ -7,21 +7,12 @@
           <span class="rd-id-label">Query</span>
           <h2 class="rd-id-value">{{ result.id || result.cdb_query_id || 'sequence' }}</h2>
         </div>
-        <div class="rd-verdict" :class="verdictClass">
-          <span class="rd-verdict-icon">{{ result.is_carboxylase ? '✓' : '✗' }}</span>
-          <div class="rd-verdict-text">
-            <strong>{{ result.is_carboxylase ? 'Carboxylase' : 'Not carboxylase' }}</strong>
-            <span class="rd-verdict-sub">{{ formatConfidence }}</span>
-          </div>
-        </div>
       </div>
 
       <div class="rd-subtitle" v-if="result.ec_name">
         <span class="rd-ec-badge">EC {{ result.ec_predicted }}</span>
         <span class="rd-ec-name">{{ result.ec_name }}</span>
       </div>
-
-      <button v-if="closable" @click="$emit('close')" class="rd-close" aria-label="Close">×</button>
     </header>
 
     <!-- ═══ WARNINGS ═════════════════════════════════════════════════════ -->
