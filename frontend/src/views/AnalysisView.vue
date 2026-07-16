@@ -11,7 +11,7 @@
           <div class="input-header">
             <span class="input-header-label">Sequence input</span>
             <span class="input-header-hint">
-              Paste one sequence (raw or FASTA) for an instant result; multiple FASTA sequences run as a batch.
+              Paste one sequence (raw or FASTA) or submit multiple FASTA sequences for batch analysis.
             </span>
           </div>
         </div>

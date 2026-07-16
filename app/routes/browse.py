@@ -6,6 +6,9 @@ import json
 from ..browse_cache import BrowseCache, load_browse_cache
 from ..db_km import fetch_sequence_km_detail, get_same_ec_experimental_km_neighbors 
 from app.pipeline.shap_summary import build_shap_payload
+from app.pipeline.db_binary_shap import (
+    build_db_binary_explanation,
+)
 
 router = APIRouter(tags=["browse"])
 
@@ -351,6 +354,21 @@ def db_sequence_detail(uniprot_id: str):
         is_carb = bool(result.get("is_carboxylase")) or result.get("label") == 1
 
         result["shap"] = build_shap_payload(ec_for_shap) if is_carb and ec_for_shap else None
+
+        try:
+            sequence_id = result.get("sequence_id")
+
+            result["binary_explanation"] = build_db_binary_explanation(
+                conn=conn,
+                sequence_id=sequence_id,
+                stored_probability=result.get("carboxylase_probability"),
+            )
+
+        except Exception as e:
+            result["binary_explanation"] = None
+            result.setdefault("warnings", []).append(
+                f"Local binary explanation unavailable: {e}"
+            )
 
         conn.close()
         return result

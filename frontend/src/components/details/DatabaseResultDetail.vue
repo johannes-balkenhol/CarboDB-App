@@ -29,23 +29,88 @@
         <div class="rd-metric-value" :class="probClass(result.carboxylase_probability)">
           {{ formatPct(result.carboxylase_probability) }}
         </div>
-        <div class="rd-metric-bar">
-          <div class="rd-metric-bar-fill" :class="probClass(result.carboxylase_probability)"
-               :style="{ width: (result.carboxylase_probability * 100) + '%' }"></div>
+        <div
+          v-if="binaryGroups.length"
+          class="rd-metric-bar rd-binary-inline-stack"
+          aria-label="Relative local SHAP feature-group importance"
+        >
+          <div
+            v-for="group in binaryGroups"
+            :key="group.group"
+            class="rd-binary-stack-segment"
+            :style="{
+              width: `${group.importance_pct}%`,
+              backgroundColor: groupColor(group.group),
+            }"
+            :title="`${shortBinaryGroupName(group.group)}: ${group.importance_pct.toFixed(1)}%`"
+          ></div>
+        </div>
+
+        <div v-else class="rd-metric-bar">
+          <div
+            class="rd-metric-bar-fill"
+            :class="probClass(result.carboxylase_probability)"
+            :style="{ width: (result.carboxylase_probability * 100) + '%' }"
+          ></div>
+        </div>
+
+        <div
+          v-if="binaryGroups.length"
+          class="rd-binary-inline-legend"
+        >
+          <span
+            v-for="group in binaryGroups.slice(0, 4)"
+            :key="group.group"
+            class="rd-binary-inline-legend-item"
+          >
+            <span
+              class="rd-binary-legend-dot"
+              :style="{ backgroundColor: groupColor(group.group) }"
+            ></span>
+
+            {{ shortBinaryGroupName(group.group) }}
+
+            <strong>
+              {{ group.importance_pct.toFixed(0) }}%
+            </strong>
+          </span>
         </div>
       </div>
 
+      <!-- ec confidence -->
       <div class="rd-metric">
         <div class="rd-metric-label">EC confidence</div>
-        <div class="rd-metric-value" :class="probClass(result.ec_confidence)">
+
+        <div
+          class="rd-metric-value"
+          :class="probClass(result.ec_confidence)"
+        >
           {{ formatPct(result.ec_confidence) }}
         </div>
+
         <div class="rd-metric-bar">
-          <div class="rd-metric-bar-fill" :class="probClass(result.ec_confidence)"
-               :style="{ width: ((result.ec_confidence || 0) * 100) + '%' }"></div>
+          <div
+            class="rd-metric-bar-fill"
+            :class="probClass(result.ec_confidence)"
+            :style="{ width: ((result.ec_confidence || 0) * 100) + '%' }"
+          ></div>
+        </div>
+
+        <div
+          v-if="topEcCandidate"
+          class="rd-ec-inline-detail"
+        >
+          <span class="rd-ec-inline-badge">
+            EC {{ topEcCandidate.ec }}
+          </span>
+
+          <span class="rd-ec-inline-name">
+            {{ topEcCandidate.name }}
+          </span>
         </div>
       </div>
 
+      <!-- predicted km -->
       <div class="rd-metric">
         <div class="rd-metric-label">Predicted Km</div>
         <div class="rd-metric-value rd-metric-km" v-if="result.km_predicted_uM != null">
@@ -152,7 +217,7 @@
           >
             <span class="rd-pfam-chip-sub">Pfam </span>
   
-            <span class="rd-pfam-chip-main">{{ acc }}</span>
+            <span class="rd-pfam-chip-main">{{ acc }} ↗</span>
             
           </a>
         </div>
@@ -692,6 +757,29 @@ const sortedEcProbs = computed(() => {
     .filter(x => x.prob > 0.0001) // hide near-zero probabilities
 })
 
+const topEcCandidate = computed(() => {
+  const fromDistribution = sortedEcProbs.value[0]
+
+  if (fromDistribution) {
+    return fromDistribution
+  }
+
+  const ec =
+    props.result?.ec_predicted ||
+    props.result?.ec_known ||
+    props.result?.ec_number
+
+  if (!ec) {
+    return null
+  }
+
+  return {
+    ec,
+    prob: props.result?.ec_confidence ?? null,
+    name: props.result?.ec_name || EC_NAMES[ec] || ec,
+  }
+})
+
 // ─── NEW Pfam normalization (handles both old list[str] and new list[dict]) ──
 const pfamNormalized = computed(() => {
   const hits = props.result.pfam_hits || []
@@ -1123,6 +1211,27 @@ const matchSummary = computed(() => {
   return { hits, absent, unknown, total: feats.length, interpretable, verdict }
 })
 
+// seqeunce level shap details or binary/ local shap
+
+const binaryGroups = computed(() => {
+  return props.result?.binary_explanation?.groups || []
+})
+
+function shortBinaryGroupName(group) {
+  const names = {
+    'ESM-2 embedding': 'ESM-2',
+    'Pfam domains': 'Pfam',
+    'Dipeptide composition': 'Dipeptides',
+    'Amino acid composition': 'Amino acids',
+    'Physicochemical properties': 'Physicochemical',
+    'Catalytic core motifs': 'Catalytic motifs',
+    'Sequence motifs': 'Sequence motifs',
+    'InterPro/domain evidence': 'InterPro',
+  }
+
+  return names[group] || group
+}
+
 </script>
 
 <style scoped>
@@ -1232,7 +1341,7 @@ const matchSummary = computed(() => {
 .rd-metric-km   { color: #2d3748; font-family: 'Monaco', monospace; font-size: 24px; }
 .rd-unit { font-size: 14px; color: #718096; font-weight: 500; margin-left: 2px; }
 .rd-metric-sub { font-size: 11px; color: #a0aec0; font-family: 'Monaco', monospace; }
-.rd-metric-bar { height: 4px; background: #edf2f7; border-radius: 2px; overflow: hidden; }
+.rd-metric-bar { height: 7px; background: #edf2f7; border-radius: 2px; overflow: hidden; }
 .rd-metric-bar-fill { height: 100%; transition: width 0.4s ease; }
 .rd-metric-bar-fill.rd-prob-high { background: #48bb78; }
 .rd-metric-bar-fill.rd-prob-mid  { background: #ed8936; }
@@ -1318,7 +1427,7 @@ const matchSummary = computed(() => {
 }
 
 .rd-pfam-chip-main {
-  color: #48bb78;
+  color: #2d3748;;
   font-family: 'Monaco', 'SF Mono', 'Menlo', monospace;
   font-size: 20px;
   font-weight: 700;
@@ -1820,6 +1929,75 @@ const matchSummary = computed(() => {
   background: #f7fafc;
   border-radius: 6px;
   padding: 8px 10px;
+}
+
+/* css for the sequnce level /binary /local shap */
+
+.rd-binary-inline-stack {
+  display: flex;
+  height: 7px;
+  border-radius: 999px;
+  background: #edf2f7;
+}
+
+.rd-binary-inline-stack .rd-binary-stack-segment {
+  height: 100%;
+  min-width: 1px;
+}
+
+.rd-binary-inline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.7rem;
+  margin-top: 0.45rem;
+}
+
+.rd-binary-inline-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #64748b;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.rd-binary-inline-legend-item strong {
+  color: #334155;
+  font-weight: 700;
+}
+
+.rd-binary-legend-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+}
+
+.rd-ec-inline-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+  min-width: 0;
+  font-size: 0.875rem;
+}
+
+.rd-ec-inline-badge {
+  padding: 0.12rem 0.35rem;
+  border-radius: 5px;
+  background: #edf2f7;
+  color: #334155;
+  font-family: 'Monaco', 'SF Mono', monospace;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rd-ec-inline-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #64748b;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 </style>
