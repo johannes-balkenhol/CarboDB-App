@@ -375,8 +375,8 @@
             <div class="rd-km-compare">
               <div class="rd-km-box rd-km-experimental">
                 <div class="rd-km-label">
-                  Experimental K<sub>m</sub>
-                  <span v-if="sim.km_exp_substrate">({{ sim.km_exp_substrate }})</span>
+                  Experimental K<sub>m</sub> of BLAST hit
+                  <!-- <span v-if="sim.km_exp_substrate">({{ sim.km_exp_substrate }})</span> -->
                 </div>
                 <div class="rd-km-value">
                   {{ sim.km_experimental_uM?.toFixed(1) ?? '—' }}
@@ -387,7 +387,7 @@
               <div class="rd-km-arrow">↔</div>
 
               <div class="rd-km-box rd-km-predicted">
-                <div class="rd-km-label">Predicted K<sub>m</sub></div>
+                <div class="rd-km-label">Predicted K<sub>m</sub> of provided sequence</div>
                 <div class="rd-km-value">
                   {{ result.km_predicted_uM?.toFixed(1) ?? '—' }}
                   <span class="rd-km-unit">µM</span>

@@ -8,16 +8,21 @@
       <!-- Unified input: 1 sequence = single predict, 2+ = batch job -->
       <div class="unified-input">
         <div class="input-header">
-          <span class="input-header-label">Sequence input</span>
-          <span class="input-header-hint">
-            Paste one sequence (raw or FASTA) for an instant result; multiple FASTA sequences run as a batch.
-          </span>
-          <label class="file-upload">
-            <input type="file" @change="handleFileUpload" accept=".fasta,.fa,.txt" />
-            📁 Upload FASTA
-          </label>
+          <div class="input-header">
+            <span class="input-header-label">Sequence input</span>
+            <span class="input-header-hint">
+              Paste one sequence (raw or FASTA) for an instant result; multiple FASTA sequences run as a batch.
+            </span>
+          </div>
         </div>
 
+        <textarea
+          v-model="fastaInput"
+          placeholder=">RuBisCO_spinach
+MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
+          rows="8"
+        ></textarea>
+        
         <div class="example-buttons">
           <span class="example-label">Try an example:</span>
           <button type="button" class="example-btn" @click="loadExample('rubisco')" title="P00875 spinach RuBisCO, 469 aa, BRENDA Km 10 µM">RuBisCO</button>
@@ -25,15 +30,21 @@
           <button type="button" class="example-btn" @click="loadExample('ca_pig')" title="A0A286ZZG4 pig CA, high-Km variant">Pig CA</button>
           <button type="button" class="example-btn" @click="loadExample('pepc_maize')" title="P04711 maize PEPC, 970 aa, EC 4.1.1.31">Maize PEPC</button>
           <button type="button" class="example-btn" @click="loadExample('batch_demo')" title="RuBisCO + CA2 (2-sequence FASTA, runs as batch)">Batch demo</button>
-        </div>
-        <br>
-        <textarea
-          v-model="fastaInput"
-          placeholder=">RuBisCO_spinach
-MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
-          rows="8"
-        ></textarea>
+        
+          <div class="file-upload-row">
+            <span class="file-upload-text">Or upload a file:</span>
 
+            <label class="file-upload">
+              <input
+                type="file"
+                @change="handleFileUpload"
+                accept=".fasta,.fa,.txt"
+              />
+              <span aria-hidden="true">📁</span>
+              <span>Upload FASTA</span>
+            </label>
+          </div>
+        </div>
         <div v-if="detectedSeqCount >= 2" class="seq-count-notice"
              :class="detectedSeqCount > 20 ? 'seq-count-warn' : 'seq-count-info'">
           <strong>{{ detectedSeqCount }} sequences detected.</strong>
@@ -117,8 +128,8 @@ MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
               <th>EC Predicted</th>
               <th>EC Conf</th>
               <th>Predicted Km <span style="font-size: 0.8em;">(µM)</span></th>
-              <th>Closest BLAST hit</th>
-              <th>Experimental Km <span style="font-size: 0.8em;">(closest hit)</span></th>
+              <!-- <th>Closest BLAST hit</th>
+              <th>Experimental Km <span style="font-size: 0.8em;">(closest hit)</span></th> -->
               <th>Actions</th>
             </tr>
           </thead>
@@ -136,7 +147,7 @@ MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
               <td class="ec-pred">{{ result.ec_predicted }}</td>
               <td>{{ (result.ec_confidence * 100).toFixed(0) }}%</td>
               <td class="km-pred">{{ result.km_predicted_uM?.toFixed(1) || '-' }}</td>
-              <td class="neighbor">
+              <!-- <td class="neighbor">
                 <button
                   v-if="result.nearest_neighbor?.uniprot_id"
                   type="button"
@@ -157,7 +168,7 @@ MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
                   {{ result.nearest_neighbor.km_experimental.toFixed(1) }} µM
                 </a>
                 <span v-else>—</span>
-              </td>
+              </td> -->
               <td>
                 <button
                   type="button"
@@ -968,26 +979,53 @@ h1 { margin: 0; color: #2d3748; }
 .example-buttons {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: nowrap;
+  gap: 6px;
+  width: 100%;
+  margin-top: 12px;
+  margin-bottom: 12px;
 }
 
 .example-label {
-  color: #718096;
-  font-size: 0.9rem;
+  margin-right: 2px;
+  font-size: 12px;
+  color: #a0aec0;
 }
 
 .example-btn {
-  padding: 6px 12px;
-  background: #e2e8f0;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.85rem;
+  padding: 5px 10px;
+
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+
   cursor: pointer;
-  transition: background 0.2s;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .example-btn:hover {
-  background: #cbd5e0;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #334155;
+  transform: translateY(-1px);
+}
+
+.example-btn:active {
+  transform: translateY(0);
+}
+
+.example-btn:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
 }
 
 textarea {
@@ -1029,14 +1067,47 @@ textarea:focus {
   margin-top: 15px;
 }
 
+.file-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  width: auto;
+  margin-top: 0;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.file-upload-text {
+  font-size: 12px;
+  color: #a0aec0;
+}
+
 .file-upload {
-  padding: 10px 20px;
-  background: #e2e8f0;
-  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+
+  color: #718096;
+  font-size: 14px;
+  line-height: 1.5;
   cursor: pointer;
 }
 
-.file-upload input { display: none; }
+.file-upload:hover {
+  background: #f7fafc;
+  border-color: #cbd5e0;
+  color: #4a5568;
+}
+
+.file-upload input {
+  display: none;
+}
 
 .batch-results {
   background: white;
@@ -1255,8 +1326,37 @@ textarea:focus {
 }
 
 .unified-input .input-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
-.input-header-label { font-size: 13px; font-weight: 600; color: #2d3748; text-transform: uppercase; letter-spacing: 0.05em; }
-.input-header-hint { font-size: 12px; color: #a0aec0; flex: 1; line-height: 1.5; }
+
+.input-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.input-header-label {
+  flex-shrink: 0;
+  display: inline-block;
+  padding: 4px 8px;
+  background: #edf2f7;
+  border-radius: 4px;
+
+  font-size: 13px;
+  font-weight: 600;
+  color: #2d3748;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.input-header-hint {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #a0aec0;
+}
+
 .seq-count-notice { margin: 10px 0; padding: 8px 12px; border-radius: 6px; font-size: 13px; line-height: 1.5; }
 .seq-count-info { background: #ebf8ff; color: #2c5282; border-left: 3px solid #4299e1; }
 .seq-count-warn { background: #fffaf0; color: #744210; border-left: 3px solid #ecc94b; }

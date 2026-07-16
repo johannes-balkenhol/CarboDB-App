@@ -378,24 +378,46 @@ function sortArrow(col) {
   margin-bottom: 14px;
 }
 .quick-picks-label {
-  font-size: 13px;
-  color: #475569;
-  margin-right: 4px;
+  margin-right: 2px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
 }
+
 .qp-btn {
-  background: #f1f5f9;
+  padding: 5px 10px;
+
+  background: #ffffff;
   border: 1px solid #e2e8f0;
-  color: #334155;
   border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 13px;
+
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+
   cursor: pointer;
-  transition: all 120ms;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
 }
+
 .qp-btn:hover {
-  background: #e0e7ff;
-  border-color: #818cf8;
-  color: #3730a3;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #334155;
+  transform: translateY(-1px);
+}
+
+.qp-btn:active {
+  transform: translateY(0);
+}
+
+.qp-btn:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
 }
 
 /* ═══ Search bar ═════════════════════════════════════════════════════════ */
