@@ -29,6 +29,20 @@
         <div class="rd-metric-value" :class="probClass(result.carboxylase_probability)">
           {{ formatPct(result.carboxylase_probability) }}
         </div>
+        <div class="rd-metric-bar">
+          <div
+            class="rd-metric-bar-fill"
+            :class="probClass(result.carboxylase_probability)"
+            :style="{ width: ((result.carboxylase_probability || 0) * 100) + '%' }"
+          ></div>
+        </div>
+        <div
+          v-if="binaryGroups.length"
+          class="rd-binary-inline-note"
+          title="Shows which feature groups influenced this sequence-level prediction most. The percentages represent relative local SHAP importance, not whether a group supported or opposed carboxylase."
+        >
+          Relative local SHAP for this sequence
+        </div>
         <div
           v-if="binaryGroups.length"
           class="rd-metric-bar rd-binary-inline-stack"
@@ -53,7 +67,6 @@
             :style="{ width: (result.carboxylase_probability * 100) + '%' }"
           ></div>
         </div>
-
         <div
           v-if="binaryGroups.length"
           class="rd-binary-inline-legend"
@@ -1931,7 +1944,7 @@ function shortBinaryGroupName(group) {
   padding: 8px 10px;
 }
 
-/* css for the sequnce level /binary /local shap */
+/* css for the sequnce level /binary / local shap */
 
 .rd-binary-inline-stack {
   display: flex;
@@ -1973,6 +1986,8 @@ function shortBinaryGroupName(group) {
   border-radius: 50%;
 }
 
+/* new ec line */
+
 .rd-ec-inline-detail {
   display: flex;
   align-items: center;
@@ -1998,6 +2013,15 @@ function shortBinaryGroupName(group) {
   color: #64748b;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.rd-binary-inline-note {
+  margin-top: 0.45rem;
+  margin-bottom: 0.45rem;
+  color: #64748b;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  cursor: help;
 }
 
 </style>

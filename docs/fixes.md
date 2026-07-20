@@ -72,8 +72,18 @@ Exposed the grouped explanation through the prediction API as `binary_explanatio
 Replaced the standard probability progress bar with a stacked SHAP contribution bar and compact legend in the prediction detail view.
 Database-side local SHAP reconstruction is feasible but was left for later implementation.
 
+### Local binary SHAP explanation for database view
+
+Reconstructed all 1,793 binary-model features directly from features_composition, features_domains, features_interpro, and features_esm2, and confirmed the recomputed carboxylase probability matched the stored value exactly.
+Added database-side local binary SHAP generation and returned it as binary_explanation, matching the structure already used by PredictionResultDetail.vue.
+Updated DatabaseResultDetail.vue to show the same stacked SHAP group bar and legend under carboxylase probability, including consistent group colors and InterPro aliases.
+Fixed the summary layout by separating the three metric blocks correctly, and added the predicted EC badge/name below EC confidence using a fallback to ec_predicted when ec_probabilities is absent.
 
 
+### removal of pfam and composite modes
+
+The current pfam mode is not truly Pfam-only: it skips ESM-2 computation but still uses the full v5 model with all ESM-2 inputs set to zero. Therefore, the result is not based only on Pfam domains, and zero-valued ESM-2 inputs may still influence tree traversal and SHAP values. 
+The composite mode is also not distinct, because it follows the same backend path and uses the same models as standard. Therefore, both labels overstate differences that are not implemented and should be removed or renamed until dedicated mode-specific logic exists.
 
 ## To DO:
 
@@ -81,7 +91,4 @@ Workspace: /storage/users/job37yv/Projects/CarboDB-App-v2/ (you're in carbodb gr
 
 
 Use ec_known/ec_number before ec_predicted in browse.py, so database entries are explained using their curated EC annotation.
-
-change front end how details are shown very non user friendly
-
-Database-side local SHAP reconstruction is feasible but was left for later implementation.
+Remaining task: enrich database Pfam hits with cached Pfam names and descriptions from InterPro; true Pfam E-values and bit scores are not stored in the current SQLite database.

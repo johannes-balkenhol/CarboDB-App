@@ -31,6 +31,20 @@
         <div class="rd-metric-value" :class="probClass(result.carboxylase_probability)">
           {{ formatPct(result.carboxylase_probability) }}
         </div>
+        <div class="rd-metric-bar">
+          <div
+            class="rd-metric-bar-fill"
+            :class="probClass(result.carboxylase_probability)"
+            :style="{ width: ((result.carboxylase_probability || 0) * 100) + '%' }"
+          ></div>
+        </div>
+        <div
+          v-if="binaryGroups.length"
+          class="rd-binary-inline-note"
+          title="Shows which feature groups influenced this sequence-level prediction most. The percentages represent relative local SHAP importance, not whether a group supported or opposed carboxylase."
+        >
+          Relative local SHAP for this sequence
+        </div>
         <div
           v-if="binaryGroups.length"
           class="rd-metric-bar rd-binary-inline-stack"
@@ -55,6 +69,7 @@
             :style="{ width: (result.carboxylase_probability * 100) + '%' }"
           ></div>
         </div>
+        
         <div
           v-if="binaryGroups.length"
           class="rd-binary-inline-legend"
@@ -1756,79 +1771,6 @@ const API_URL = import.meta.env.VITE_API_URL || ''
   padding: 8px 10px;
 }
 
-/* binary calssifcation  */
-
-.rd-binary-inline-stack {
-  display: flex;
-  height: 7px;
-  border-radius: 999px;
-  background: #edf2f7;
-}
-
-.rd-binary-inline-stack .rd-binary-stack-segment {
-  height: 100%;
-  min-width: 1px;
-}
-
-.rd-binary-inline-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem 0.7rem;
-  margin-top: 0.45rem;
-}
-
-.rd-binary-inline-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  color: #64748b;
-  font-size: 0.875rem;
-  white-space: nowrap;
-}
-
-.rd-binary-inline-legend-item strong {
-  color: #334155;
-  font-weight: 700;
-}
-
-.rd-binary-legend-dot {
-  width: 8px;
-  height: 8px;
-  flex: 0 0 8px;
-  border-radius: 50%;
-}
-
-
-/* new ec line */
-
-.rd-ec-inline-detail {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.45rem;
-  min-width: 0;
-  font-size: 0.875rem;
-}
-
-.rd-ec-inline-badge {
-  padding: 0.12rem 0.35rem;
-  border-radius: 5px;
-  background: #edf2f7;
-  color: #334155;
-  font-family: 'Monaco', 'SF Mono', monospace;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.rd-ec-inline-name {
-  min-width: 0;
-  overflow: hidden;
-  color: #64748b;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-
 .rd-neighbor-db-link {
   padding: 0;
   border: 0;
@@ -1917,4 +1859,87 @@ const API_URL = import.meta.env.VITE_API_URL || ''
   background: #e2e8f0;
   color: #0f172a;
 }
+
+
+/* binary calssifcation  */
+
+.rd-binary-inline-stack {
+  display: flex;
+  margin-top: 0.45rem;
+  height: 7px;
+  border-radius: 999px;
+  background: #edf2f7;
+}
+
+.rd-binary-inline-stack .rd-binary-stack-segment {
+  height: 100%;
+  min-width: 1px;
+}
+
+.rd-binary-inline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.7rem;
+  margin-top: 0.45rem;
+}
+
+.rd-binary-inline-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #64748b;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.rd-binary-inline-legend-item strong {
+  color: #334155;
+  font-weight: 700;
+}
+
+.rd-binary-legend-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+}
+
+.rd-binary-inline-note {
+  margin-top: 0.45rem;
+  color: #64748b;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  cursor: help;
+}
+
+/* new ec line */
+
+.rd-ec-inline-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+  min-width: 0;
+  font-size: 0.875rem;
+}
+
+.rd-ec-inline-badge {
+  padding: 0.12rem 0.35rem;
+  border-radius: 5px;
+  background: #edf2f7;
+  color: #334155;
+  font-family: 'Monaco', 'SF Mono', monospace;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rd-ec-inline-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #64748b;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
 </style>
