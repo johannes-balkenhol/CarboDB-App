@@ -371,6 +371,7 @@ export default {
   border-radius: 4px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  margin: 0 0 0.9rem;
 }
 .ed-meta { display: flex; gap: 0.5em; align-items: center; }
 .ed-badge {
@@ -394,10 +395,17 @@ export default {
 .ed-section {
   margin: 1.25em 0;
   padding-top: 0.25em;
+  margin: 1.5rem 0;
+}
+
+.ed-section > p,
+.ed-section > div:not(.structure-viewer) {
+  margin-left: 0.25rem;
+  margin-right: 0.25rem;
 }
 
 .ed-section.ed-no-structure { color: #888; font-style: italic; }
-.ed-fn { line-height: 1.5; color: #234; }
+.ed-fn { margin: 0.75rem 0.25rem 0; line-height: 1.5; color: #234; }
 .ed-pill {
   display: inline-block;
   margin: 0.15em 0.3em 0.15em 0;
@@ -462,6 +470,11 @@ export default {
   text-align: right;
 }
 .ed-footer a { color: #36c; text-decoration: none; }
+
+/* padding */
+.ed-content {
+  padding: 1rem 1.25rem 1.25rem;
+}
 
 @media (max-width: 800px) {
   .ed-go-cols { grid-template-columns: 1fr; }

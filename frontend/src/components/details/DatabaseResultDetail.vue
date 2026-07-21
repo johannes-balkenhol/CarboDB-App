@@ -432,8 +432,7 @@
 
 
       <div v-if="!showFeatureImportance" class="rd-collapse-preview">
-        SHAP feature-importance data available for
-        <strong>{{ shapTabs.map(t => t.label).join(' and ') }}</strong>.
+        SHAP feature-importance data.
         Open to inspect influential domains, motifs, physicochemical features, and embeddings.
       </div>
 
@@ -720,6 +719,10 @@
           {{ showExtendedDetails ? 'Collapse' : 'Click to expand' }}
         </span>
       </button>
+
+      <div v-if="!showExtendedDetails" class="rd-collapse-preview">
+        External UniProt and AlphaFold annotation for this entry. Open to view functional-site annotations, GO terms, and predicted structure.
+      </div>
 
       <div v-if="showExtendedDetails" class="rd-collapse-content">
         <div class="rd-info-note">

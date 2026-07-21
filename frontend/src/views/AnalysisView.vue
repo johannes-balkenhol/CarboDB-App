@@ -130,7 +130,7 @@ MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
               <th>Predicted Km <span style="font-size: 0.8em;">(µM)</span></th>
               <!-- <th>Closest BLAST hit</th>
               <th>Experimental Km <span style="font-size: 0.8em;">(closest hit)</span></th> -->
-              <th>Actions</th>
+              <th>Details</th>
             </tr>
           </thead>
           <tbody>
