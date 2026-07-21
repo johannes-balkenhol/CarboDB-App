@@ -4,7 +4,7 @@
     <header class="rd-header">
       <div class="rd-header-main">
         <div class="rd-id">
-          <span class="rd-id-label">Query</span>
+          <span class="rd-id-label">Entry</span>
           <h2 class="rd-id-value">{{ result.id || result.cdb_query_id || 'sequence' }}</h2>
         </div>
       </div>
@@ -689,13 +689,53 @@
         Novelty: <strong :class="'rd-novelty-' + result.novelty_flag">{{ result.novelty_flag }}</strong>
       </span>
     </footer> -->
+
     <!-- Extended UniProt + AlphaFold annotation, lazy-loaded behind a button -->
-    <ExtendedDetails
+    <section
       v-if="result && (result.uniprot_id || result.id)"
-      :uniprot-id="result.uniprot_id || result.id"
-      api-base="/api/v1"
-      :pfam-hits="result.pfam_hits || []"
-    />
+      class="rd-section rd-collapsible-section"
+    >
+      <button
+        type="button"
+        class="rd-collapse-header"
+        :class="{ open: showExtendedDetails }"
+        @click="showExtendedDetails = !showExtendedDetails"
+      >
+        <span class="rd-collapse-left">
+          <span class="rd-collapse-icon">
+            {{ showExtendedDetails ? '−' : '+' }}
+          </span>
+
+          <span class="rd-collapse-text">
+            <span class="rd-collapse-title">
+              Extended details
+            </span>
+            <span class="rd-collapse-subtitle">
+              UniProt annotation and AlphaFold structure
+            </span>
+          </span>
+        </span>
+
+        <span class="rd-collapse-action">
+          {{ showExtendedDetails ? 'Collapse' : 'Click to expand' }}
+        </span>
+      </button>
+
+      <div v-if="showExtendedDetails" class="rd-collapse-content">
+        <div class="rd-info-note">
+          Some CarboDB entries may correspond to UniProt entries that have since been
+          deleted, merged, or marked inactive. For these records, current UniProt
+          function, GO terms, taxonomy, and functional-site annotations may be
+          unavailable, although CarboDB metadata and AlphaFold structures may still
+          be shown.
+        </div>
+        <ExtendedDetails
+          :uniprot-id="result.uniprot_id || result.id"
+          api-base="/api/v1"
+          :pfam-hits="result.pfam_hits || []"
+        />
+      </div>
+    </section>
   </div>
 </template>
 
@@ -714,6 +754,7 @@ const shapTab = ref('ec_classification')
 // collapsable information for database entries
 const showFeatureImportance = ref(false)
 const showKmReferences = ref(false)
+const showExtendedDetails = ref(false)
 
 // ─── Formatting helpers ──────────────────────────────────────────────────
 function formatPct(p) {
@@ -2022,6 +2063,24 @@ function shortBinaryGroupName(group) {
   font-size: 0.72rem;
   line-height: 1.35;
   cursor: help;
+}
+
+/* extended etails information box */
+
+.rd-info-note {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  background: #ffffe4;
+  border-left: 4px solid #fdfd83;
+  border-radius: 4px;
+  color: #4a5a6a;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin-top: 0.5rem;
+}
+
+.rd-info-note strong {
+  color: #2f465d;
 }
 
 </style>
