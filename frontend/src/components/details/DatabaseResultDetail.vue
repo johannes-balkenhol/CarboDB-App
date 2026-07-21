@@ -1603,6 +1603,8 @@ function shortBinaryGroupName(group) {
   background: #f7fafc; border-radius: 8px; font-size: 13px;
 }
 
+/* collapsible sections */
+
 .rd-collapsible-section {
   padding: 0;
   border-top: 1px solid #e2e8f0;

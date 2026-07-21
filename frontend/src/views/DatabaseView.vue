@@ -103,7 +103,9 @@ const route = useRoute()
             <th @click="setSort('uniprot')" :class="{ active: filters.sort === 'uniprot' }">
               UniProt ID
             </th>
-            <th>Organism</th>
+            <th @click="setSort('organism')" :class="{ active: sortIs('organism') }">
+              Organism {{ sortArrow('organism') }}
+            </th>
             <th>EC</th>
             <th @click="setSort('length')" :class="{ active: sortIs('length') }">
               Length {{ sortArrow('length') }}
@@ -111,7 +113,9 @@ const route = useRoute()
             <th @click="setSort('km_pred')" :class="{ active: sortIs('km_pred') }">
               Predicted Km (µM) {{ sortArrow('km_pred') }}
             </th>
-            <th>Experimental Km (µM)</th>
+            <th @click="setSort('km_exp')" :class="{ active: sortIs('km_exp') }">
+              Experimental Km (µM) {{ sortArrow('km_exp') }}
+            </th>
             <th>Source</th>
             <th></th>
           </tr>
@@ -312,21 +316,60 @@ function fmtInt(value) {
 function setSort(col) {
   if (col === 'uniprot') {
     filters.sort = 'uniprot'
+  } else if (col === 'organism') {
+    filters.sort =
+      filters.sort === 'organism_asc'
+        ? 'organism_desc'
+        : 'organism_asc'
   } else if (col === 'length') {
-    filters.sort = filters.sort === 'length_asc' ? 'length_desc' : 'length_asc'
+    filters.sort =
+      filters.sort === 'length_asc'
+        ? 'length_desc'
+        : 'length_asc'
   } else if (col === 'km_pred') {
-    filters.sort = filters.sort === 'km_asc' ? 'km_desc' : 'km_asc'
+    filters.sort =
+      filters.sort === 'km_pred_asc'
+        ? 'km_pred_desc'
+        : 'km_pred_asc'
+  } else if (col === 'km_exp') {
+    filters.sort =
+      filters.sort === 'km_exp_asc'
+        ? 'km_exp_desc'
+        : 'km_exp_asc'
   }
+
   search(0)
 }
+
 function sortIs(col) {
-  if (col === 'length') return filters.sort.startsWith('length')
-  if (col === 'km_pred') return filters.sort.startsWith('km_')
+  if (col === 'organism') return filters.sort.startsWith('organism_')
+  if (col === 'length') return filters.sort.startsWith('length_')
+  if (col === 'km_pred') return filters.sort.startsWith('km_pred_')
+  if (col === 'km_exp') return filters.sort.startsWith('km_exp_')
   return filters.sort === col
 }
+
 function sortArrow(col) {
-  if (col === 'length') return filters.sort === 'length_asc' ? '↑' : filters.sort === 'length_desc' ? '↓' : ''
-  if (col === 'km_pred') return filters.sort === 'km_asc' ? '↑' : filters.sort === 'km_desc' ? '↓' : ''
+  if (col === 'organism') {
+    if (filters.sort === 'organism_asc') return '↑'
+    if (filters.sort === 'organism_desc') return '↓'
+  }
+
+  if (col === 'length') {
+    if (filters.sort === 'length_asc') return '↑'
+    if (filters.sort === 'length_desc') return '↓'
+  }
+
+  if (col === 'km_pred') {
+    if (filters.sort === 'km_pred_asc') return '↑'
+    if (filters.sort === 'km_pred_desc') return '↓'
+  }
+
+  if (col === 'km_exp') {
+    if (filters.sort === 'km_exp_asc') return '↑'
+    if (filters.sort === 'km_exp_desc') return '↓'
+  }
+
   return ''
 }
 </script>

@@ -153,18 +153,39 @@ def browse(
 
         filtered.append(row)
 
-    if sort == "km_asc":
+    if sort in ("km_asc", "km_pred_asc"):
         filtered.sort(
             key=lambda r: (
                 r.get("km_predicted_uM") is None,
-                r.get("km_predicted_uM") if r.get("km_predicted_uM") is not None else float("inf"),
+                r.get("km_predicted_uM")
+                if r.get("km_predicted_uM") is not None
+                else float("inf"),
             )
         )
-    elif sort == "km_desc":
+
+    elif sort in ("km_desc", "km_pred_desc"):
         filtered.sort(
             key=lambda r: (
                 r.get("km_predicted_uM") is None,
                 -(r.get("km_predicted_uM") or 0),
+            )
+        )
+
+    elif sort == "km_exp_asc":
+        filtered.sort(
+            key=lambda r: (
+                r.get("km_experimental_uM") is None,
+                r.get("km_experimental_uM")
+                if r.get("km_experimental_uM") is not None
+                else float("inf"),
+            )
+        )
+
+    elif sort == "km_exp_desc":
+        filtered.sort(
+            key=lambda r: (
+                r.get("km_experimental_uM") is None,
+                -(r.get("km_experimental_uM") or 0),
             )
         )
     elif sort == "length_asc":
@@ -173,7 +194,31 @@ def browse(
         filtered.sort(key=lambda r: -(r.get("length") or 0))
     elif sort == "uniprot":
         filtered.sort(key=lambda r: r.get("uniprot_id") or "")
-            
+    
+    elif sort == "organism_asc":
+        filtered.sort(
+            key=lambda r: (
+                r.get("organism") is None or not str(r.get("organism")).strip(),
+                str(r.get("organism") or "").lower(),
+            )
+        )
+
+    elif sort == "organism_desc":
+        with_organism = [
+            r for r in filtered
+            if r.get("organism") and str(r.get("organism")).strip()
+        ]
+        without_organism = [
+            r for r in filtered
+            if not r.get("organism") or not str(r.get("organism")).strip()
+        ]
+
+        with_organism.sort(
+            key=lambda r: str(r.get("organism")).lower(),
+            reverse=True,
+        )
+
+        filtered = with_organism + without_organism
     
 
     total = len(filtered)

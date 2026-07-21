@@ -59,7 +59,6 @@ MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
               <option value="fast">Fast (~5s, ablation without ESM-2)</option>
               <option value="standard">Standard (~15s, +ESM-2) benchmark pipeline (R2=0.953)</option>
               <option value="pfam">Pfam-only (~3s, ablation)</option>
-              <option value="composite">Composite (~25s, Best CI)</option>
             </select>
           </div>
           <div class="kingdom-select">
@@ -73,32 +72,49 @@ MSPQTETKASVGFKAGVKDYKLTYYTPEYETKDTDILAAFRVTPQPG..."
           </div>
         </div>
 
-        <button @click="analyze" :disabled="loading" class="predict-btn">
-          <span v-if="!loading">
-            Analyze {{ detectedSeqCount >= 2 ? `${detectedSeqCount} sequences` : 'Sequence' }}
-          </span>
+        <div class="analysis-action-row">
+          <button
+            @click="analyze"
+            :disabled="loading"
+            class="predict-btn"
+          >
+            <span v-if="!loading">
+              Analyze {{ detectedSeqCount >= 2 ? `${detectedSeqCount} sequences` : 'Sequence' }}
+            </span>
 
-          <span v-else-if="batchProgress">
-            Analyzing batch: {{ batchProgress.processed }}/{{ batchProgress.total }} ({{ batchProgress.progressPct || 0 }}%)
-          </span>
+            <span v-else-if="batchProgress">
+              Analyzing batch:
+              {{ batchProgress.processed }}/{{ batchProgress.total }}
+              ({{ batchProgress.progressPct || 0 }}%)
+            </span>
 
-          <span v-else-if="predictStatus">
-            Prediction {{ predictStatus }}...
-          </span>
+            <span v-else-if="predictStatus">
+              Prediction {{ predictStatus }}...
+            </span>
 
-          <span v-else>
-            Analyzing...
-          </span>
-        </button>
+            <span v-else>
+              Analyzing...
+            </span>
+          </button>
 
-        <button
-          v-if="loading && (predictJobId || batchProgress?.jobId)"
-          type="button"
-          class="cancel-btn"
-          @click="cancelCurrentJob"
-        >
-          Cancel {{ batchProgress?.jobId ? 'batch prediction' : 'prediction' }}
-        </button>
+          <button
+            type="button"
+            class="analysis-reset-btn"
+            :disabled="loading"
+            @click="resetAnalysis"
+          >
+            Reset
+          </button>
+
+          <button
+            v-if="loading && (predictJobId || batchProgress?.jobId)"
+            type="button"
+            class="cancel-btn"
+            @click="cancelCurrentJob"
+          >
+            Cancel {{ batchProgress?.jobId ? 'batch prediction' : 'prediction' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -355,6 +371,32 @@ async function cancelCurrentJob() {
   } else {
     await cancelPrediction()
   }
+}
+
+// reset fucntion
+
+function resetAnalysis() {
+  fastaInput.value = ''
+  singleSequence.value = ''
+
+  batchResults.value = []
+  summary.value = {
+    total: 0,
+    consensus_positive: 0,
+    with_neighbor: 0,
+  }
+
+  selectedResult.value = null
+  error.value = null
+
+  batchProgress.value = null
+  predictStatus.value = null
+  predictJobId.value = null
+
+  selectedMode.value = 'standard'
+  selectedKingdom.value = 'plant'
+
+  closeCarboDbModal()
 }
 
 async function predictSingle() {
@@ -989,7 +1031,8 @@ h1 { margin: 0; color: #2d3748; }
 .example-label {
   margin-right: 2px;
   font-size: 12px;
-  color: #a0aec0;
+  color: #575e67;
+  font-weight: 500;
 }
 
 .example-btn {
@@ -1043,9 +1086,62 @@ textarea:focus {
   outline: none;
 }
 
+/* buttons */
+.analysis-action-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.analysis-action-row .predict-btn {
+  flex: 1;
+}
+
+.analysis-reset-btn {
+  padding: 0.8rem 1.25rem;
+  margin-top: auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #e5e7eb;
+  color: #334155;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.analysis-reset-btn:hover:not(:disabled) {
+  background: #d1d5db;
+  border-color: #94a3b8;
+}
+
+.analysis-reset-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cancel-btn {
+  margin-top: auto;
+  margin-left: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border: 1px solid #c44;
+  border-radius: 8px;
+  background: white;
+  color: #c44;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.cancel-btn:hover {
+  background: #fff0f0;
+}
+
+
 .predict-btn {
   margin-top: 15px;
-  padding: 12px 30px;
+  padding: 12px 16px;
   background: linear-gradient(135deg, #6366f1, #4f46e5);
   color: white;
   border: none;
@@ -1080,7 +1176,8 @@ textarea:focus {
 
 .file-upload-text {
   font-size: 12px;
-  color: #a0aec0;
+  color: #5f6976;
+  font-weight: 500;
 }
 
 .file-upload {
@@ -1286,12 +1383,18 @@ textarea:focus {
   display: flex;
   align-items: center;
   gap: 8px;
+  label {
+    font-size: 14px;
+    color: #4f5764;
+    font-weight: 500;
+  }
 }
 .mode-select select, .kingdom-select select {
   padding: 8px 12px;
-  border: 2px solid #e2e8f0;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 12.5px;
+  font-weight: 300;
   background: white;
 }
 
@@ -1308,21 +1411,6 @@ textarea:focus {
   text-decoration: none;
   border-bottom-color: #dd6b20;
   color: #c05621;
-}
-
-.cancel-btn {
-  margin-left: 0.75rem;
-  padding: 0.75rem 1.25rem;
-  border: 1px solid #c44;
-  border-radius: 8px;
-  background: white;
-  color: #c44;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.cancel-btn:hover {
-  background: #fff0f0;
 }
 
 .unified-input .input-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
