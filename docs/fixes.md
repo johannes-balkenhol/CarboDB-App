@@ -80,12 +80,12 @@ Updated DatabaseResultDetail.vue to show the same stacked SHAP group bar and leg
 Fixed the summary layout by separating the three metric blocks correctly, and added the predicted EC badge/name below EC confidence using a fallback to ec_predicted when ec_probabilities is absent.
 
 
-### removal of pfam and composite modes
+### Removal of pfam and composite modes
 
 The current pfam mode is not truly Pfam-only: it skips ESM-2 computation but still uses the full v5 model with all ESM-2 inputs set to zero. Therefore, the result is not based only on Pfam domains, and zero-valued ESM-2 inputs may still influence tree traversal and SHAP values. 
 The composite mode is also not distinct, because it follows the same backend path and uses the same models as standard. Therefore, both labels overstate differences that are not implemented and should be removed or renamed until dedicated mode-specific logic exists.
 
-*composite mode removed'
+*composite mode removed*
 
 ### Fix entended details
 
@@ -101,5 +101,4 @@ Added option to sort for organism, Experimental Km along with Uniport ID, Length
 Workspace: /storage/users/job37yv/Projects/CarboDB-App-v2/ (you're in carbodb group — log out + back in if groups doesn't show it). Pull main, read docs/2026-06-24_AMAN_REPORT.md for start/stop/logs. Test the running app in browser (VPN on): http://132.187.22.206:5173/ → Analysis → click RuBisCO example → Analyze. Should return EC 4.1.1.39 after ~30-90s.
 
 
-Use ec_known/ec_number before ec_predicted in browse.py, so database entries are explained using their curated EC annotation.
 Remaining task: enrich database Pfam hits with cached Pfam names and descriptions from InterPro; true Pfam E-values and bit scores are not stored in the current SQLite database.
