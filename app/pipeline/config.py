@@ -17,8 +17,10 @@ from pathlib import Path
 
 # ── Project root (one level above scripts/) ───────────────────────────────────
 # Works whether you run from the project root or from scripts/
-_THIS_FILE = Path(__file__).resolve()
+_THIS_FILE = Path(__file__).resolve().parents[1]
 ROOT = _THIS_FILE.parent   # config.py lives at project root
+
+print(f"Project root: {ROOT}")
 
 # ── Timestamp (set once per import, shared by all scripts in a run) ───────────
 TS = datetime.now().strftime("%Y%m%d_%H%M%S")

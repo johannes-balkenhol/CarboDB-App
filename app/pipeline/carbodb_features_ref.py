@@ -60,6 +60,7 @@ log = setup_logging("11_annotate_sequence")
 
 MODEL_DIR  = ROOT / "data" / "models"
 ML_DIR     = ROOT / "data" / "ml"
+TMP_ROOT   = ROOT / "tmp"
 
 AMINO_ACIDS = list("ACDEFGHIKLMNPQRSTVWY")
 
@@ -595,84 +596,86 @@ def annotate_sequence(seq_id: str,
         ec_map     = json.load(open(ec_map_path))
         ec_map_inv = {v: k for k, v in ec_map.items()}
 
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_path = Path(tmp_dir)
+    TMP_ROOT.mkdir(parents=True, exist_ok=True)
+    # NOTE: use a persistent temp folder and do not delete it automatically
+    tmp_path = TMP_ROOT / f"annotate_tmp_{int(time.time() * 1000)}"
+    tmp_path.mkdir(parents=True, exist_ok=True)
 
-        # Step 1: Composition
-        log.info("Computing composition features...")
-        comp_feats = compute_composition(seq_clean)
-        result["features_used"].append("composition")
+    # Step 1: Composition
+    log.info("Computing composition features...")
+    comp_feats = compute_composition(seq_clean)
+    result["features_used"].append("composition")
 
-        # Step 2: Pfam
-        log.info("Running HMMER/Pfam scan...")
-        pfam_feats, pfam_hits = run_hmmer_pfam(seq_id, seq_clean, tmp_path)
-        result["pfam_hits"] = pfam_hits
-        result["features_used"].append("pfam")
+    # Step 2: Pfam
+    log.info("Running HMMER/Pfam scan...")
+    pfam_feats, pfam_hits = run_hmmer_pfam(seq_id, seq_clean, tmp_path)
+    result["pfam_hits"] = pfam_hits
+    result["features_used"].append("pfam")
 
-        # Step 3: InterPro
-        interpro_feats = compute_interpro_features(pfam_hits)
-        result["features_used"].append("interpro")
+    # Step 3: InterPro
+    interpro_feats = compute_interpro_features(pfam_hits)
+    result["features_used"].append("interpro")
 
-        # Step 4: ESM-2
-        esm2_emb = None
-        if use_esm2:
-            log.info("Computing ESM-2 embedding (this takes ~10-30s)...")
-            try:
-                esm2_emb = compute_esm2(seq_id, seq_clean)
-                result["features_used"].append("esm2")
-            except Exception as e:
-                log.warning("ESM-2 failed: %s — continuing without embedding", e)
-                result["warnings"].append(f"ESM-2 failed: {e}")
+    # Step 4: ESM-2
+    esm2_emb = None
+    if use_esm2:
+        log.info("Computing ESM-2 embedding (this takes ~10-30s)...")
+        try:
+            esm2_emb = compute_esm2(seq_id, seq_clean)
+            result["features_used"].append("esm2")
+        except Exception as e:
+            log.warning("ESM-2 failed: %s — continuing without embedding", e)
+            result["warnings"].append(f"ESM-2 failed: {e}")
+    else:
+        log.info("Skipping ESM-2 (--no-esm2 mode)")
+        result["warnings"].append("ESM-2 skipped — predictions may be less accurate")
+
+    # Step 5: Assemble binary feature vector
+    log.info("Assembling feature vector...")
+    binary_vec = assemble_feature_vector(
+        comp_feats, pfam_feats, interpro_feats, esm2_emb, feat_names_binary)
+
+    # Step 6: Binary prediction
+    log.info("Predicting carboxylase activity...")
+    is_carb, carb_prob, conf = predict_binary(models["binary"], binary_vec)
+
+    result["is_carboxylase"]           = bool(is_carb)
+    result["carboxylase_probability"]  = round(carb_prob, 4)
+    result["confidence"]               = conf
+
+    log.info("  is_carboxylase=%s  prob=%.4f  confidence=%s",
+                is_carb, carb_prob, conf)
+
+    # Step 7: EC prediction (always run, even if not carboxylase)
+    if models["ec"] is not None and ec_map_inv:
+        # EC model uses same feature vector as binary
+        ec_vec = assemble_feature_vector(
+            comp_feats, pfam_feats, interpro_feats, esm2_emb, feat_names_ec)
+        ec_pred, ec_prob, ec_probs = predict_ec(
+            models["ec"], ec_vec, ec_map_inv)
+
+        result["ec_predicted"]    = ec_pred
+        result["ec_name"]         = EC_NAMES.get(ec_pred, ec_pred)
+        result["ec_probabilities"] = ec_probs
+        log.info("  ec_pred=%s  prob=%.4f", ec_pred, ec_prob)
+    else:
+        result["warnings"].append("EC model not available")
+
+    # Step 8: Km prediction (only if carboxylase + EC is in trainable set)
+    if is_carb and models["km"] is not None:
+        ec_for_km = result["ec_predicted"]
+        if ec_for_km in KM_TRAINABLE_EC:
+            km_vec = assemble_km_vector(
+                binary_vec, ec_for_km, kingdom, feat_names_km)
+            km_mM, km_log10 = predict_km(models["km"], km_vec)
+            result["km_predicted_mM"]   = round(km_mM, 4)
+            result["km_predicted_log10"] = round(km_log10, 4)
+            result["km_ec_used"]         = ec_for_km
+            log.info("  km_pred=%.4f mM (log10=%.3f)", km_mM, km_log10)
         else:
-            log.info("Skipping ESM-2 (--no-esm2 mode)")
-            result["warnings"].append("ESM-2 skipped — predictions may be less accurate")
-
-        # Step 5: Assemble binary feature vector
-        log.info("Assembling feature vector...")
-        binary_vec = assemble_feature_vector(
-            comp_feats, pfam_feats, interpro_feats, esm2_emb, feat_names_binary)
-
-        # Step 6: Binary prediction
-        log.info("Predicting carboxylase activity...")
-        is_carb, carb_prob, conf = predict_binary(models["binary"], binary_vec)
-
-        result["is_carboxylase"]           = bool(is_carb)
-        result["carboxylase_probability"]  = round(carb_prob, 4)
-        result["confidence"]               = conf
-
-        log.info("  is_carboxylase=%s  prob=%.4f  confidence=%s",
-                 is_carb, carb_prob, conf)
-
-        # Step 7: EC prediction (always run, even if not carboxylase)
-        if models["ec"] is not None and ec_map_inv:
-            # EC model uses same feature vector as binary
-            ec_vec = assemble_feature_vector(
-                comp_feats, pfam_feats, interpro_feats, esm2_emb, feat_names_ec)
-            ec_pred, ec_prob, ec_probs = predict_ec(
-                models["ec"], ec_vec, ec_map_inv)
-
-            result["ec_predicted"]    = ec_pred
-            result["ec_name"]         = EC_NAMES.get(ec_pred, ec_pred)
-            result["ec_probabilities"] = ec_probs
-            log.info("  ec_pred=%s  prob=%.4f", ec_pred, ec_prob)
-        else:
-            result["warnings"].append("EC model not available")
-
-        # Step 8: Km prediction (only if carboxylase + EC is in trainable set)
-        if is_carb and models["km"] is not None:
-            ec_for_km = result["ec_predicted"]
-            if ec_for_km in KM_TRAINABLE_EC:
-                km_vec = assemble_km_vector(
-                    binary_vec, ec_for_km, kingdom, feat_names_km)
-                km_mM, km_log10 = predict_km(models["km"], km_vec)
-                result["km_predicted_mM"]   = round(km_mM, 4)
-                result["km_predicted_log10"] = round(km_log10, 4)
-                result["km_ec_used"]         = ec_for_km
-                log.info("  km_pred=%.4f mM (log10=%.3f)", km_mM, km_log10)
-            else:
-                result["warnings"].append(
-                    f"Km prediction not available for EC {ec_for_km} "
-                    f"(not in trainable set: {KM_TRAINABLE_EC})")
+            result["warnings"].append(
+                f"Km prediction not available for EC {ec_for_km} "
+                f"(not in trainable set: {KM_TRAINABLE_EC})")
 
     result["runtime_seconds"] = round(time.time() - t0, 2)
     return result

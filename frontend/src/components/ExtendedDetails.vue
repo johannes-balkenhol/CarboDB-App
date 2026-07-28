@@ -29,16 +29,6 @@
 <template>
   <div class="extended-details">
     <!-- Trigger button -->
-    <button
-      v-if="!loaded && !loading"
-      class="ed-trigger"
-      @click="loadExternalData"
-    >
-      🔬 Show extended annotation (UniProt + AlphaFold)
-      <span class="ed-trigger-hint">
-        — fetches GO terms, function description, active sites, 3D structure
-      </span>
-    </button>
 
     <div v-if="loading" class="ed-loading">
       Fetching extended annotation from UniProt and AlphaFold…
@@ -52,7 +42,7 @@
     <div v-if="loaded && data" class="ed-content">
       <!-- Header with metadata + cache status -->
       <div class="ed-header">
-        <h3 class="ed-h">Extended annotation</h3>
+        <h3 class="ed-h"></h3>
         <div class="ed-meta">
           <span v-if="data.stale" class="ed-badge ed-badge-warn">
             Cached ({{ formatRelative(data.cached_at) }}) — upstream unavailable
@@ -248,6 +238,10 @@ export default {
       data: null,
     };
   },
+
+  mounted() {
+    this.loadExternalData();
+  },
   computed: {
     hasAnyGoTerms() {
       const g = this.data?.uniprot?.go_terms || {};
@@ -358,27 +352,26 @@ export default {
   cursor: pointer;
 }
 
-.ed-content {
-  border: 1px solid #d8d8d8;
-  border-radius: 6px;
-  padding: 1em 1.25em;
-  background: #fff;
-}
 .ed-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.75em;
   padding-bottom: 0.5em;
-  border-bottom: 1px solid #eee;
 }
 .ed-h { margin: 0; font-size: 1.05em; }
 .ed-h4 {
-  font-size: 0.95em;
-  margin: 0.25em 0 0.5em;
-  color: #345;
+  font-size: 0.92em;
+  font-weight: 700;
+  margin: 0 0 0.75em;
+  padding: 0.55em 0.75em;
+  color: #2f4f6f;
+  background: #f1f5f9;
+  border-left: 4px solid #4f46e5;
+  border-radius: 4px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.9rem;
 }
 .ed-meta { display: flex; gap: 0.5em; align-items: center; }
 .ed-badge {
@@ -399,9 +392,20 @@ export default {
   font-size: 0.8em;
 }
 
-.ed-section { margin: 1.25em 0; }
+.ed-section {
+  margin: 1.25em 0;
+  padding-top: 0.25em;
+  margin: 1.5rem 0;
+}
+
+.ed-section > p,
+.ed-section > div:not(.structure-viewer) {
+  margin-left: 0.25rem;
+  margin-right: 0.25rem;
+}
+
 .ed-section.ed-no-structure { color: #888; font-style: italic; }
-.ed-fn { line-height: 1.5; color: #234; }
+.ed-fn { margin: 0.75rem 0.25rem 0; line-height: 1.5; color: #234; }
 .ed-pill {
   display: inline-block;
   margin: 0.15em 0.3em 0.15em 0;
@@ -466,6 +470,11 @@ export default {
   text-align: right;
 }
 .ed-footer a { color: #36c; text-decoration: none; }
+
+/* padding */
+.ed-content {
+  padding: 1rem 1.25rem 1.25rem;
+}
 
 @media (max-width: 800px) {
   .ed-go-cols { grid-template-columns: 1fr; }
