@@ -5,8 +5,8 @@ import VueDevTools from 'vite-plugin-vue-devtools'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const frontendPort = parseInt(env.FRONTEND_PORT || env.VITE_FRONTEND_PORT || '5173', 10)
-  const backendPort  = parseInt(env.BACKEND_PORT  || env.VITE_BACKEND_PORT  || '8090', 10)
+  const frontendPort = parseInt(env.FRONTEND_PORT || env.VITE_FRONTEND_PORT || '5174', 10)
+  const backendPort  = parseInt(env.BACKEND_PORT  || env.VITE_BACKEND_PORT  || '8091', 10)
 
   return {
     plugins: [vue(), VueDevTools()],

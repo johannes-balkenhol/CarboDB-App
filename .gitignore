@@ -4,6 +4,8 @@ backend/uploaded_user_data/
 **/__pycache__/*.bak
 *.oldbak
 *.before_*
+tmp/
+logs/
 
 # Python bytecode
 __pycache__/

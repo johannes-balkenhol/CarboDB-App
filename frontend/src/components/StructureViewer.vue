@@ -87,6 +87,9 @@
 // NGL is loaded globally via CDN (see usage instructions in INTEGRATION.md).
 // We don't import it as a module to avoid bundler complications.
 
+let stage = null;
+let structureComponent = null;
+
 export default {
   name: "StructureViewer",
   props: {
@@ -101,8 +104,6 @@ export default {
       loading: true,
       error: null,
       colorScheme: "plddt",
-      stage: null,
-      structureComponent: null,
     };
   },
   computed: {
@@ -125,10 +126,14 @@ export default {
     this.initStage();
   },
   beforeUnmount() {
-    if (this.stage) {
-      this.stage.dispose();
-      this.stage = null;
+    window.removeEventListener("resize", this.handleResize);
+
+    if (stage) {
+      stage.dispose();
+      stage = null;
     }
+
+    structureComponent = null;
   },
   methods: {
     async initStage() {
@@ -139,20 +144,31 @@ export default {
       }
 
       try {
-        this.stage = new NGL.Stage(this.$refs.canvasEl, {
+        stage = new NGL.Stage(this.$refs.canvasEl, {
           backgroundColor: "white",
           quality: "medium",
         });
-        // Resize handler so the canvas adjusts when its container resizes
+
+        stage.handleResize();
+
         window.addEventListener("resize", this.handleResize);
 
         const url = `${this.apiBase}/external/${this.uniprotId}/structure`;
-        this.structureComponent = await this.stage.loadFile(url, { ext: "pdb" });
+        structureComponent = await stage.loadFile(url, { ext: "pdb" });
 
         this.applyColorScheme();
-        this.structureComponent.autoView();
 
         this.loading = false;
+
+        this.$nextTick(() => {
+          setTimeout(() => {
+            if (!stage || !structureComponent) return;
+
+            stage.handleResize();
+            structureComponent.autoView(500);
+          }, 100);
+        });
+
         this.$emit("structure-loaded");
       } catch (e) {
         this.error = e.message || "Unknown error";
@@ -161,11 +177,11 @@ export default {
       }
     },
     handleResize() {
-      if (this.stage) this.stage.handleResize();
+      if (stage) stage.handleResize();
     },
     applyColorScheme() {
-      if (!this.structureComponent) return;
-      this.structureComponent.removeAllRepresentations();
+      if (!structureComponent) return;
+      structureComponent.removeAllRepresentations();
 
       let colorScheme;
       let representation = "cartoon";
@@ -174,7 +190,7 @@ export default {
         case "plddt":
           // AlphaFold stores pLDDT in the B-factor column
           colorScheme = "bfactor";
-          this.structureComponent.addRepresentation(representation, {
+          structureComponent.addRepresentation(representation, {
             colorScheme,
             colorScale: ["red", "orange", "yellow", "lightblue", "blue"],
             colorDomain: [50, 70, 90, 100],
@@ -183,13 +199,13 @@ export default {
 
         case "pfam":
           // Default: light grey, then color each Pfam domain span
-          this.structureComponent.addRepresentation(representation, {
+          structureComponent.addRepresentation(representation, {
             color: "lightgrey",
           });
           this.pfamHits.forEach((hit, i) => {
             if (hit.start == null || hit.end == null) return;
             const color = this.pfamColor(i);
-            this.structureComponent.addRepresentation(representation, {
+            structureComponent.addRepresentation(representation, {
               sele: `${hit.start}-${hit.end}`,
               color,
             });
@@ -197,12 +213,12 @@ export default {
           break;
 
         case "motif":
-          this.structureComponent.addRepresentation(representation, {
+          structureComponent.addRepresentation(representation, {
             color: "lightgrey",
           });
           this.motifPositions.forEach((m, i) => {
             if (m.start == null || m.end == null) return;
-            this.structureComponent.addRepresentation(representation, {
+            structureComponent.addRepresentation(representation, {
               sele: `${m.start}-${m.end}`,
               color: this.motifColor(i),
             });
@@ -210,7 +226,7 @@ export default {
           // Show motif residues as sticks for emphasis
           this.motifPositions.forEach(m => {
             if (m.start == null || m.end == null) return;
-            this.structureComponent.addRepresentation("ball+stick", {
+            structureComponent.addRepresentation("ball+stick", {
               sele: `${m.start}-${m.end} and not (water or ion)`,
               color: this.motifColor(0),
             });
@@ -219,14 +235,14 @@ export default {
 
         case "rainbow":
         default:
-          this.structureComponent.addRepresentation(representation, {
+          structureComponent.addRepresentation(representation, {
             colorScheme: "residueindex",
           });
           break;
       }
     },
     resetView() {
-      if (this.structureComponent) this.structureComponent.autoView(500);
+      if (structureComponent) structureComponent.autoView(500);
     },
     pfamColor(i) {
       const palette = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",

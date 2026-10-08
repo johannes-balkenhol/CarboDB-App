@@ -51,6 +51,16 @@ from pathlib import Path
 
 import numpy as np
 
+try:
+    from .composition import extract_all as extract_display_features
+except ImportError:
+    from composition import extract_all as extract_display_features
+
+try:
+    from .shap_summary import build_shap_payload
+except ImportError:
+    from shap_summary import build_shap_payload
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from config import CFG, PATHS, ROOT, setup_logging
 
@@ -60,6 +70,7 @@ log = setup_logging("11_annotate_sequence")
 
 MODEL_DIR  = ROOT / "data" / "models"
 ML_DIR     = ROOT / "data" / "ml"
+TMP_ROOT   = ROOT / "tmp"
 
 AMINO_ACIDS = list("ACDEFGHIKLMNPQRSTVWY")
 
@@ -308,19 +319,57 @@ def run_hmmer_pfam(seq_id: str, seq: str, tmp_dir: Path) -> dict:
             return feats, pfam_hits
 
         # Parse domtblout
+        # with open(out_tmp) as f:
+        #     for line in f:
+        #         if line.startswith("#"):
+        #             continue
+        #         parts = line.split()
+        #         if len(parts) < 4:
+        #             continue
+        #         pfam_acc = parts[1].split(".")[0]  # e.g. PF00016
+        #         evalue   = float(parts[12])
+        #         if evalue > CFG.HMMER_EVALUE:
+        #             continue
+        #         pfam_hits.append(pfam_acc)
+        #         feats["pfam_n_hits"] += 1
+        #         if pfam_acc in CFG.CARBOXY_PFAM:
+        #             feats[f"pfam_{pfam_acc}"] = 1
+
+        # Parse domtblout
         with open(out_tmp) as f:
             for line in f:
                 if line.startswith("#"):
                     continue
+
                 parts = line.split()
-                if len(parts) < 4:
+                if len(parts) < 22:
                     continue
-                pfam_acc = parts[1].split(".")[0]  # e.g. PF00016
-                evalue   = float(parts[12])
-                if evalue > CFG.HMMER_EVALUE:
+
+                target_name = parts[0]                  # e.g. Carb_anhydrase
+                pfam_acc    = parts[1].split(".")[0]    # e.g. PF00194
+                full_evalue = float(parts[6])           # full-sequence E-value
+                full_score  = float(parts[7])           # full-sequence bitscore
+
+                domain_evalue = float(parts[12])        # i-Evalue for this domain
+                domain_score  = float(parts[13])        # domain bitscore
+
+                description = " ".join(parts[22:]) if len(parts) > 22 else ""
+
+                if domain_evalue > CFG.HMMER_EVALUE:
                     continue
-                pfam_hits.append(pfam_acc)
+
+                pfam_hits.append({
+                    "target_name": target_name,
+                    "accession": pfam_acc,
+                    "evalue": domain_evalue,
+                    "bitscore": domain_score,
+                    "full_sequence_evalue": full_evalue,
+                    "full_sequence_bitscore": full_score,
+                    "description": description,
+                })
+
                 feats["pfam_n_hits"] += 1
+
                 if pfam_acc in CFG.CARBOXY_PFAM:
                     feats[f"pfam_{pfam_acc}"] = 1
 
@@ -329,7 +378,8 @@ def run_hmmer_pfam(seq_id: str, seq: str, tmp_dir: Path) -> dict:
     except FileNotFoundError:
         log.warning("hmmscan not found in PATH — skipping Pfam features")
 
-    return feats, list(set(pfam_hits))
+    # return feats, list(set(pfam_hits))
+    return feats, pfam_hits
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -345,11 +395,14 @@ def compute_interpro_features(pfam_hits: list) -> dict:
     PANTHER/TIGRFAM/CATH/SUPERFAMILY require separate HMM databases not
     always present. We fill with 0 and flag a warning if needed.
     """
+    # feats = {col: 0 for col in INTERPRO_COLS}
+    # feats["n_pfam_hits"] = len(pfam_hits)
+    # # Others remain 0 unless full InterPro scan is available
+    # return feats
+
     feats = {col: 0 for col in INTERPRO_COLS}
     feats["n_pfam_hits"] = len(pfam_hits)
-    # Others remain 0 unless full InterPro scan is available
     return feats
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 5. ESM-2 embedding (1280 dims)
@@ -573,8 +626,11 @@ def annotate_sequence(seq_id: str,
         "km_ec_used":             None,
         "features_used":          [],
         "pfam_hits":              [],
+        "features_computed":      {},
         "warnings":               warnings,
         "runtime_seconds":        None,
+        "shap":                    None,
+        "binary_explanation":      None,
     }
 
     # Load models & feature name lists
@@ -595,88 +651,293 @@ def annotate_sequence(seq_id: str,
         ec_map     = json.load(open(ec_map_path))
         ec_map_inv = {v: k for k, v in ec_map.items()}
 
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_path = Path(tmp_dir)
 
-        # Step 1: Composition
-        log.info("Computing composition features...")
-        comp_feats = compute_composition(seq_clean)
-        result["features_used"].append("composition")
+    TMP_ROOT.mkdir(parents=True, exist_ok=True)
+    # NOTE: use a persistent temp folder and do not delete it automatically
+    tmp_path = TMP_ROOT / f"annotate_tmp_{int(time.time() * 1000)}"
+    tmp_path.mkdir(parents=True, exist_ok=True)
 
-        # Step 2: Pfam
-        log.info("Running HMMER/Pfam scan...")
-        pfam_feats, pfam_hits = run_hmmer_pfam(seq_id, seq_clean, tmp_path)
-        result["pfam_hits"] = pfam_hits
-        result["features_used"].append("pfam")
+    # Step 1: Composition
+    log.info("Computing composition features...")
+    comp_feats = compute_composition(seq_clean)
+    result["features_used"].append("composition")
 
-        # Step 3: InterPro
-        interpro_feats = compute_interpro_features(pfam_hits)
-        result["features_used"].append("interpro")
+    # Display-oriented features for ResultDetail.vue:
+    # sequence motifs + physicochemical properties.
+    try:
+        display_feats = extract_display_features(seq_id, seq_clean)
+        display_feats.pop("cdb_id", None)
+        result["features_computed"].update(display_feats)
+    except Exception as e:
+        log.warning("Display feature extraction failed: %s", e)
+        result["warnings"].append(f"Display feature extraction failed: {e}")
 
-        # Step 4: ESM-2
-        esm2_emb = None
-        if use_esm2:
-            log.info("Computing ESM-2 embedding (this takes ~10-30s)...")
-            try:
-                esm2_emb = compute_esm2(seq_id, seq_clean)
-                result["features_used"].append("esm2")
-            except Exception as e:
-                log.warning("ESM-2 failed: %s — continuing without embedding", e)
-                result["warnings"].append(f"ESM-2 failed: {e}")
+    # Step 2: Pfam
+    log.info("Running HMMER/Pfam scan...")
+    pfam_feats, pfam_hits = run_hmmer_pfam(seq_id, seq_clean, tmp_path)
+    result["pfam_hits"] = pfam_hits
+    result["features_used"].append("pfam")
+
+    # Step 3: InterPro
+    interpro_feats = compute_interpro_features(pfam_hits)
+    result["features_used"].append("interpro")
+
+    # Step 4: ESM-2
+    esm2_emb = None
+    if use_esm2:
+        log.info("Computing ESM-2 embedding (this takes ~10-30s)...")
+        try:
+            esm2_emb = compute_esm2(seq_id, seq_clean)
+            result["features_used"].append("esm2")
+        except Exception as e:
+            log.warning("ESM-2 failed: %s — continuing without embedding", e)
+            result["warnings"].append(f"ESM-2 failed: {e}")
+    else:
+        log.info("Skipping ESM-2 (--no-esm2 mode)")
+        result["warnings"].append("ESM-2 skipped — predictions may be less accurate")
+
+    # Step 5: Assemble binary feature vector
+    log.info("Assembling feature vector...")
+    binary_vec = assemble_feature_vector(
+        comp_feats, pfam_feats, interpro_feats, esm2_emb, feat_names_binary)
+
+    # Step 6: Binary prediction
+    log.info("Predicting carboxylase activity...")
+    is_carb, carb_prob, conf = predict_binary(models["binary"], binary_vec)
+
+    # waht contains other featurtes?
+    try:
+        raw_binary_explanation = predict_binary_contributions(
+            models["binary"],
+            binary_vec,
+            feat_names_binary,
+        )
+
+        grouped_binary_contributions = group_binary_contributions(
+            raw_binary_explanation
+        )
+
+        top_binary_features = sorted(
+            raw_binary_explanation["features"],
+            key=lambda row: row["abs_shap"],
+            reverse=True,
+        )[:10]
+
+        binary_explanation = {
+            "base_value": round(raw_binary_explanation["bias"], 6),
+            "groups": grouped_binary_contributions,
+            "top_features": [
+                {
+                    "feature": row["feature"],
+                    "group": binary_feature_group(row["feature"]),
+                    "shap_value": round(row["shap_value"], 6),
+                    "abs_shap": round(row["abs_shap"], 6),
+                    "direction": (
+                        "supports_carboxylase"
+                        if row["shap_value"] > 0
+                        else "supports_non_carboxylase"
+                        if row["shap_value"] < 0
+                        else "neutral"
+                    ),
+                }
+                for row in top_binary_features
+            ],
+        }
+
+    except Exception as e:
+        log.warning("Binary SHAP contribution calculation failed: %s", e)
+        result["warnings"].append(
+            f"Binary explanation calculation failed: {e}"
+        )
+        binary_explanation = None
+
+    if binary_explanation is not None:
+        binary_explanation["model_probability"] = round(carb_prob, 8)
+
+    result["binary_explanation"] = binary_explanation
+
+
+    result["is_carboxylase"] = bool(is_carb)
+    result["carboxylase_probability"] = round(carb_prob, 4)
+    result["confidence"] = conf
+    result["binary_explanation"] = binary_explanation
+
+    log.info("  is_carboxylase=%s  prob=%.4f  confidence=%s",
+                is_carb, carb_prob, conf)
+
+    # Step 7: EC prediction (always run, even if not carboxylase)
+    if models["ec"] is not None and ec_map_inv:
+        # EC model uses same feature vector as binary
+        ec_vec = assemble_feature_vector(
+            comp_feats, pfam_feats, interpro_feats, esm2_emb, feat_names_ec)
+        ec_pred, ec_prob, ec_probs = predict_ec(
+            models["ec"], ec_vec, ec_map_inv)
+
+        result["ec_predicted"]    = ec_pred
+        result["ec_name"]         = EC_NAMES.get(ec_pred, ec_pred)
+        result["ec_probabilities"] = ec_probs
+        log.info("  ec_pred=%s  prob=%.4f", ec_pred, ec_prob)
+    else:
+        result["warnings"].append("EC model not available")
+
+
+    # Step 8: Km prediction (only if carboxylase + EC is in trainable set)
+    if is_carb and models["km"] is not None:
+        ec_for_km = result["ec_predicted"]
+        if ec_for_km in KM_TRAINABLE_EC:
+            km_vec = assemble_km_vector(
+                binary_vec, ec_for_km, kingdom, feat_names_km)
+            km_mM, km_log10 = predict_km(models["km"], km_vec)
+            result["km_predicted_mM"]   = round(km_mM, 4)
+            result["km_predicted_log10"] = round(km_log10, 4)
+            result["km_ec_used"]         = ec_for_km
+            log.info("  km_pred=%.4f mM (log10=%.3f)", km_mM, km_log10)
         else:
-            log.info("Skipping ESM-2 (--no-esm2 mode)")
-            result["warnings"].append("ESM-2 skipped — predictions may be less accurate")
-
-        # Step 5: Assemble binary feature vector
-        log.info("Assembling feature vector...")
-        binary_vec = assemble_feature_vector(
-            comp_feats, pfam_feats, interpro_feats, esm2_emb, feat_names_binary)
-
-        # Step 6: Binary prediction
-        log.info("Predicting carboxylase activity...")
-        is_carb, carb_prob, conf = predict_binary(models["binary"], binary_vec)
-
-        result["is_carboxylase"]           = bool(is_carb)
-        result["carboxylase_probability"]  = round(carb_prob, 4)
-        result["confidence"]               = conf
-
-        log.info("  is_carboxylase=%s  prob=%.4f  confidence=%s",
-                 is_carb, carb_prob, conf)
-
-        # Step 7: EC prediction (always run, even if not carboxylase)
-        if models["ec"] is not None and ec_map_inv:
-            # EC model uses same feature vector as binary
-            ec_vec = assemble_feature_vector(
-                comp_feats, pfam_feats, interpro_feats, esm2_emb, feat_names_ec)
-            ec_pred, ec_prob, ec_probs = predict_ec(
-                models["ec"], ec_vec, ec_map_inv)
-
-            result["ec_predicted"]    = ec_pred
-            result["ec_name"]         = EC_NAMES.get(ec_pred, ec_pred)
-            result["ec_probabilities"] = ec_probs
-            log.info("  ec_pred=%s  prob=%.4f", ec_pred, ec_prob)
-        else:
-            result["warnings"].append("EC model not available")
-
-        # Step 8: Km prediction (only if carboxylase + EC is in trainable set)
-        if is_carb and models["km"] is not None:
-            ec_for_km = result["ec_predicted"]
-            if ec_for_km in KM_TRAINABLE_EC:
-                km_vec = assemble_km_vector(
-                    binary_vec, ec_for_km, kingdom, feat_names_km)
-                km_mM, km_log10 = predict_km(models["km"], km_vec)
-                result["km_predicted_mM"]   = round(km_mM, 4)
-                result["km_predicted_log10"] = round(km_log10, 4)
-                result["km_ec_used"]         = ec_for_km
-                log.info("  km_pred=%.4f mM (log10=%.3f)", km_mM, km_log10)
-            else:
-                result["warnings"].append(
-                    f"Km prediction not available for EC {ec_for_km} "
-                    f"(not in trainable set: {KM_TRAINABLE_EC})")
+            result["warnings"].append(
+                f"Km prediction not available for EC {ec_for_km} "
+                f"(not in trainable set: {KM_TRAINABLE_EC})")
+            
+    
+    # new result for shap values 
+    if result.get("is_carboxylase") and result.get("ec_predicted"):
+        result["shap"] = build_shap_payload(result.get("ec_predicted"))
+    else:
+        result["shap"] = None
 
     result["runtime_seconds"] = round(time.time() - t0, 2)
     return result
 
+
+def predict_binary_contributions(
+    booster,
+    vec: np.ndarray,
+    feature_names: list[str],
+) -> dict:
+    import xgboost as xgb
+
+    dmat = xgb.DMatrix(
+        vec.reshape(1, -1),
+        feature_names=feature_names,
+    )
+
+    contributions = booster.predict(
+        dmat,
+        pred_contribs=True,
+    )[0]
+
+    feature_values = contributions[:-1]
+    bias = float(contributions[-1])
+
+    rows = []
+
+    for name, value in zip(feature_names, feature_values):
+        rows.append({
+            "feature": name,
+            "shap_value": float(value),
+            "abs_shap": abs(float(value)),
+        })
+
+    return {
+        "bias": bias,
+        "features": rows,
+    }
+
+def binary_feature_group(feature_name: str) -> str:
+    if feature_name.startswith("pfam_"):
+        return "Pfam domains"
+
+    if feature_name.startswith("esm2_"):
+        return "ESM-2 embedding"
+
+    if feature_name.startswith("dp_"):
+        return "Dipeptide composition"
+
+    if feature_name.startswith("aac_") or feature_name.startswith("pse_"):
+        return "Amino acid composition"
+
+    if feature_name.startswith("phys_"):
+        return "Physicochemical properties"
+
+    if feature_name.startswith("motif_"):
+        return "Sequence motifs"
+
+    if feature_name.startswith("inv_"):
+        return "Catalytic core motifs"
+
+    if feature_name in {
+        "n_pfam_hits",
+        "n_panther_hits",
+        "n_tigrfam_hits",
+        "n_cath_hits",
+        "n_superfamily_hits",
+    }:
+        return "InterPro/domain evidence"
+
+    return "Other"
+
+def group_binary_contributions(explanation: dict) -> list[dict]:
+    if not explanation or not explanation.get("features"):
+        return []
+
+    grouped = {}
+
+    for row in explanation["features"]:
+        group_name = binary_feature_group(row["feature"])
+
+        if group_name not in grouped:
+            grouped[group_name] = {
+                "group": group_name,
+                "signed_shap": 0.0,
+                "abs_shap": 0.0,
+                "positive_shap": 0.0,
+                "negative_shap": 0.0,
+                "feature_count": 0,
+            }
+
+        shap_value = float(row["shap_value"])
+
+        grouped[group_name]["signed_shap"] += shap_value
+        grouped[group_name]["abs_shap"] += abs(shap_value)
+        grouped[group_name]["feature_count"] += 1
+
+        if shap_value > 0:
+            grouped[group_name]["positive_shap"] += shap_value
+        elif shap_value < 0:
+            grouped[group_name]["negative_shap"] += abs(shap_value)
+
+    total_abs = sum(group["abs_shap"] for group in grouped.values())
+
+    output = []
+
+    for group in grouped.values():
+        signed = group["signed_shap"]
+
+        group["importance_pct"] = (
+            group["abs_shap"] / total_abs * 100.0
+            if total_abs > 0
+            else 0.0
+        )
+
+        if signed > 0:
+            group["direction"] = "supports_carboxylase"
+        elif signed < 0:
+            group["direction"] = "supports_non_carboxylase"
+        else:
+            group["direction"] = "neutral"
+
+        group["signed_shap"] = round(group["signed_shap"], 6)
+        group["abs_shap"] = round(group["abs_shap"], 6)
+        group["positive_shap"] = round(group["positive_shap"], 6)
+        group["negative_shap"] = round(group["negative_shap"], 6)
+        group["importance_pct"] = round(group["importance_pct"], 2)
+
+        output.append(group)
+
+    return sorted(
+        output,
+        key=lambda group: group["abs_shap"],
+        reverse=True,
+    )
 
 # ══════════════════════════════════════════════════════════════════════════════
 # CLI

@@ -1,0 +1,8 @@
+2026-05-26 18:06:51  INFO      Log file: /storage/users/projects/CarboDB-App-v2/app/pipeline/logs/11_annotate_sequence_20260526_180651.log
+2026-05-26 18:06:51  INFO      Parsed 1 sequence(s)
+2026-05-26 18:06:51  INFO      ── Annotating: query (len=469) ──
+2026-05-26 18:06:51  INFO      Loading models...
+2026-05-26 18:06:55  WARNING     Model not found: /storage/users/projects/CarboDB-App-v2/app/pipeline/data/models/binary_v5.json
+2026-05-26 18:06:55  WARNING     Model not found: /storage/users/projects/CarboDB-App-v2/app/pipeline/data/models/ec_v5.json
+2026-05-26 18:06:55  WARNING     Model not found: /storage/users/projects/CarboDB-App-v2/app/pipeline/data/models/km_v5_weighted.json
+2026-05-26 18:06:55  INFO      Saved: /tmp/tmpxufsy00m.json

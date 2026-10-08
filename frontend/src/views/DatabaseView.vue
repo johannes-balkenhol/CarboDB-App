@@ -1,28 +1,40 @@
+import { onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
 <template>
   <div class="database-view">
-    <!-- ═══ Stats banner ═══════════════════════════════════════════════════ -->
-    <div v-if="stats" class="stats-banner">
-      <div class="stat-card">
-        <div class="stat-value">{{ stats.total_sequences.toLocaleString() }}</div>
-        <div class="stat-label">Total sequences</div>
-      </div>
-      <div class="stat-card stat-card-primary">
-        <div class="stat-value">{{ stats.predicted_carboxylases.toLocaleString() }}</div>
-        <div class="stat-label">Predicted carboxylases</div>
-      </div>
-      <div class="stat-card stat-card-accent">
-        <div class="stat-value">{{ stats.with_experimental_km.toLocaleString() }}</div>
-        <div class="stat-label">With experimental Km</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">{{ stats.ec_classes_total }}</div>
-        <div class="stat-label">EC classes</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">{{ stats.reviewed_count.toLocaleString() }}</div>
-        <div class="stat-label">SwissProt-curated</div>
-      </div>
+  <!-- ═══ Stats banner ═══════════════════════════════════════════════════ -->
+  <div v-if="stats" class="stats-banner">
+    <div class="stat-card">
+      <div class="stat-value">{{ fmtInt(stats?.all_sequences ?? stats?.total_sequences) }}</div>
+      <div class="stat-label">Total sequences</div>
     </div>
+
+    <div class="stat-card stat-card-primary">
+      <div class="stat-value">{{ fmtInt(stats?.predicted_carboxylases) }}</div>
+      <div class="stat-label">Predicted carboxylases</div>
+    </div>
+
+    <div class="stat-card stat-card-accent">
+      <div class="stat-value">{{ fmtInt(stats?.with_experimental_km) }}</div>
+      <div class="stat-label">With experimental Km</div>
+    </div>
+
+    <!-- // now uses option linked to the dropdown menu  -->
+    <div class="stat-card">
+      <div class="stat-value">
+        {{ fmtInt(ecOptions.length) }}
+      </div>
+      <div class="stat-label">Carboxylase EC classes</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-value">{{ fmtInt(stats?.swissprot_curated ?? stats?.reviewed_count ?? stats?.reviewed) }}</div>
+      <div class="stat-label">SwissProt-curated</div>
+    </div>
+  </div>
 
     <!-- ═══ Quick-pick example queries ═════════════════════════════════════ -->
     <div class="quick-picks">
@@ -45,9 +57,12 @@
         @keyup.enter="search(0)"
       />
       <select v-model="filters.ec" class="filter-select" @change="search(0)">
-        <option value="">All EC classes</option>
+        <option value="">All carboxylase EC classes</option>
+
         <option v-for="ec in ecOptions" :key="ec.ec_number" :value="ec.ec_number">
-          {{ ec.ec_number }} — {{ ec.ec_name }} ({{ ec.count.toLocaleString() }})
+          {{ ec.ec_number }}
+          <template v-if="ec.ec_name"> — {{ ec.ec_name }}</template>
+          ({{ fmtInt(ec.count) }})
         </option>
       </select>
       <button class="search-btn" @click="search(0)">Search</button>
@@ -67,7 +82,7 @@
         Predicted carboxylase
       </label>
       <span class="result-summary" v-if="totalResults > 0">
-        {{ totalResults.toLocaleString() }} matches
+        {{ fmtInt(totalResults) }} matches
         <span class="page-info">
           (showing {{ offset + 1 }}–{{ Math.min(offset + results.length, totalResults) }})
         </span>
@@ -88,7 +103,9 @@
             <th @click="setSort('uniprot')" :class="{ active: filters.sort === 'uniprot' }">
               UniProt ID
             </th>
-            <th>Organism</th>
+            <th @click="setSort('organism')" :class="{ active: sortIs('organism') }">
+              Organism {{ sortArrow('organism') }}
+            </th>
             <th>EC</th>
             <th @click="setSort('length')" :class="{ active: sortIs('length') }">
               Length {{ sortArrow('length') }}
@@ -96,7 +113,9 @@
             <th @click="setSort('km_pred')" :class="{ active: sortIs('km_pred') }">
               Predicted Km (µM) {{ sortArrow('km_pred') }}
             </th>
-            <th>Experimental Km (µM)</th>
+            <th @click="setSort('km_exp')" :class="{ active: sortIs('km_exp') }">
+              Experimental Km (µM) {{ sortArrow('km_exp') }}
+            </th>
             <th>Source</th>
             <th></th>
           </tr>
@@ -141,23 +160,47 @@
     </div>
 
     <!-- ═══ Detail modal — reuses ResultDetail component ═══════════════════ -->
-    <div v-if="selectedDetail" class="detail-modal-overlay" @click.self="selectedDetail = null">
+    <div
+      v-if="selectedDetail || detailLoading"
+      class="detail-modal-overlay"
+      @click.self="!detailLoading && (selectedDetail = null)"
+    >
       <div class="detail-modal">
-        <button class="detail-close" @click="selectedDetail = null">×</button>
-        <ResultDetail :result="selectedDetail" />
+        <button
+          class="detail-close"
+          @click="selectedDetail = null; detailLoading = false"
+        >
+          ×
+        </button>
+
+        <div v-if="detailLoading" class="detail-loading">
+          Loading Entry Details ...
+        </div>
+
+        <ResultDetail
+          v-else-if="selectedDetail"
+          :result="selectedDetail"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, watch, computed, onMounted } from 'vue'
 import ResultDetail from '../components/ResultDetail.vue'
+import { useRoute } from 'vue-router'
+
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
 // ─── reactive state ──────────────────────────────────────────────────────
-const stats = ref(null)
+const stats = ref({
+  total_sequences: 0,
+  predicted_carboxylases: 0,
+  with_experimental_km: 0,
+  reviewed_count: 0,
+})
 const results = ref([])
 const totalResults = ref(0)
 const offset = ref(0)
@@ -165,6 +208,7 @@ const limit = 50
 const loading = ref(false)
 const hasSearched = ref(false)
 const selectedDetail = ref(null)
+const detailLoading = ref(false)
 
 const filters = reactive({
   q: '',
@@ -222,25 +266,23 @@ async function search(newOffset) {
 
 // ─── interaction ─────────────────────────────────────────────────────────
 async function openDetail(row) {
-  selectedDetail.value = { ...row, _loading: true }
+  detailLoading.value = true
+  selectedDetail.value = null
+
   try {
-    const res = await fetch(`${API_URL}/api/v1/db/seq/${row.uniprot_id}`)
+    const res = await fetch(`${API_URL}/api/v1/db/seq/${encodeURIComponent(row.uniprot_id)}`)
+
     if (res.ok) {
       selectedDetail.value = await res.json()
     } else {
-      // Fall back: keep the row data so the modal at least shows the basics
-      selectedDetail.value = {
-        ...row,
-        id: row.uniprot_id,
-        sequence_length: row.length,
-      }
+      console.error(`Failed to load details for ${row.uniprot_id}`)
+      selectedDetail.value = null
     }
   } catch (e) {
-    selectedDetail.value = {
-      ...row,
-      id: row.uniprot_id,
-      sequence_length: row.length,
-    }
+    console.error('detail fetch failed', e)
+    selectedDetail.value = null
+  } finally {
+    detailLoading.value = false
   }
 }
 
@@ -265,25 +307,69 @@ function resetFilters(opts = {}) {
   if (!opts.keepDefaults) search(0)
 }
 
+function fmtInt(value) {
+  const n = Number(value)
+  return Number.isFinite(n) ? n.toLocaleString() : '0'
+}
+
 // ─── sort helpers ────────────────────────────────────────────────────────
 function setSort(col) {
   if (col === 'uniprot') {
     filters.sort = 'uniprot'
+  } else if (col === 'organism') {
+    filters.sort =
+      filters.sort === 'organism_asc'
+        ? 'organism_desc'
+        : 'organism_asc'
   } else if (col === 'length') {
-    filters.sort = filters.sort === 'length_asc' ? 'length_desc' : 'length_asc'
+    filters.sort =
+      filters.sort === 'length_asc'
+        ? 'length_desc'
+        : 'length_asc'
   } else if (col === 'km_pred') {
-    filters.sort = filters.sort === 'km_asc' ? 'km_desc' : 'km_asc'
+    filters.sort =
+      filters.sort === 'km_pred_asc'
+        ? 'km_pred_desc'
+        : 'km_pred_asc'
+  } else if (col === 'km_exp') {
+    filters.sort =
+      filters.sort === 'km_exp_asc'
+        ? 'km_exp_desc'
+        : 'km_exp_asc'
   }
+
   search(0)
 }
+
 function sortIs(col) {
-  if (col === 'length') return filters.sort.startsWith('length')
-  if (col === 'km_pred') return filters.sort.startsWith('km_')
+  if (col === 'organism') return filters.sort.startsWith('organism_')
+  if (col === 'length') return filters.sort.startsWith('length_')
+  if (col === 'km_pred') return filters.sort.startsWith('km_pred_')
+  if (col === 'km_exp') return filters.sort.startsWith('km_exp_')
   return filters.sort === col
 }
+
 function sortArrow(col) {
-  if (col === 'length') return filters.sort === 'length_asc' ? '↑' : filters.sort === 'length_desc' ? '↓' : ''
-  if (col === 'km_pred') return filters.sort === 'km_asc' ? '↑' : filters.sort === 'km_desc' ? '↓' : ''
+  if (col === 'organism') {
+    if (filters.sort === 'organism_asc') return '↑'
+    if (filters.sort === 'organism_desc') return '↓'
+  }
+
+  if (col === 'length') {
+    if (filters.sort === 'length_asc') return '↑'
+    if (filters.sort === 'length_desc') return '↓'
+  }
+
+  if (col === 'km_pred') {
+    if (filters.sort === 'km_pred_asc') return '↑'
+    if (filters.sort === 'km_pred_desc') return '↓'
+  }
+
+  if (col === 'km_exp') {
+    if (filters.sort === 'km_exp_asc') return '↑'
+    if (filters.sort === 'km_exp_desc') return '↓'
+  }
+
   return ''
 }
 </script>
@@ -335,24 +421,46 @@ function sortArrow(col) {
   margin-bottom: 14px;
 }
 .quick-picks-label {
-  font-size: 13px;
-  color: #475569;
-  margin-right: 4px;
+  margin-right: 2px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
 }
+
 .qp-btn {
-  background: #f1f5f9;
+  padding: 5px 10px;
+
+  background: #ffffff;
   border: 1px solid #e2e8f0;
-  color: #334155;
   border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 13px;
+
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+
   cursor: pointer;
-  transition: all 120ms;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
 }
+
 .qp-btn:hover {
-  background: #e0e7ff;
-  border-color: #818cf8;
-  color: #3730a3;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #334155;
+  transform: translateY(-1px);
+}
+
+.qp-btn:active {
+  transform: translateY(0);
+}
+
+.qp-btn:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
 }
 
 /* ═══ Search bar ═════════════════════════════════════════════════════════ */
@@ -363,6 +471,8 @@ function sortArrow(col) {
   margin-bottom: 8px;
 }
 .search-input, .filter-select {
+  height: 38px;
+  box-sizing: border-box;
   padding: 9px 12px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -379,6 +489,7 @@ function sortArrow(col) {
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
+  height: 38px;
   cursor: pointer;
 }
 .search-btn {
@@ -530,6 +641,12 @@ function sortArrow(col) {
   color: #64748b;
   cursor: pointer;
   z-index: 1;
+}
+.detail-loading {
+  padding: 80px 24px;
+  text-align: center;
+  color: #64748b;
+  font-size: 15px;
 }
 .detail-close:hover { color: #0f172a; }
 
